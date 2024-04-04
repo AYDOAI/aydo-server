@@ -1,0 +1,4 @@
+database.sqlite
+/plugins
+/node_modules
+/config
