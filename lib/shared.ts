@@ -20,3 +20,7 @@ export function removeLast(data, chr = '\n') {
   }
   return result
 }
+
+export function getDeviceIdent(ident) {
+  return ident ? ident.split('.').join('_') : '';
+}

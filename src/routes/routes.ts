@@ -81,7 +81,7 @@ function initRoutes(app) {
       if ((req.method === 'GET' && res.method === '/')) {
         return res.status(200).send('<html>' +
           '<body>' +
-          '<p>The web interface is available in the cloud version</p>' +
+          '<p>The web interface is available in the cloud version.</p>' +
           '</body>' +
           '</html>');
       } else {

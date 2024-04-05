@@ -8,6 +8,14 @@ async function up({context: queryInterface}) {
       "primaryKey": true,
       "autoIncrement": true
     },
+    "ident": {
+      "type": Sequelize.STRING,
+      "allowNull": false
+    },
+    "identifier": {
+      "type": Sequelize.STRING,
+      "allowNull": true
+    },
     "name": {
       "type": Sequelize.STRING,
       "allowNull": false

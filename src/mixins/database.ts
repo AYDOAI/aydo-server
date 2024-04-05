@@ -11,6 +11,8 @@ export const Database = toMixin(base => class Database extends base {
 
   database = {
     devices: {id: 1, items: []},
+    device_capabilities: {id: 1, items: []},
+    device_settings: {id: 1, items: []},
     drivers: {id: 1, items: []},
     users: {id: 1, items: []},
     zones: {id: 1, items: []},
@@ -62,7 +64,7 @@ export const Database = toMixin(base => class Database extends base {
       let errors = 0;
       const done = (error = null) => {
         if (error) {
-          this.errorEx('Database.loadDatabase()', error);
+          this.error('Database.loadDatabase()', error);
           errors++;
         } else {
           counter++;
@@ -255,9 +257,25 @@ export const Database = toMixin(base => class Database extends base {
       })
     });
   }
+
   updateFields(row, fields) {
     Object.keys(fields).forEach(itemKey => {
       row[itemKey] = fields[itemKey];
+    });
+  }
+
+  updateItem(table: DbTables, options, where) {
+    return new Promise((resolve, reject) => {
+      this.getItem(table, where, false, false).then(row => {
+        this.updateFields(row, options);
+        this.models[table].updateItem(options, where).then(() => {
+        }).catch(error => {
+          this.error('Database.updateItem()', error);
+        });
+        resolve(row);
+      }).catch((error) => {
+        reject(error);
+      });
     });
   }
 

@@ -13,7 +13,7 @@ export class DeviceCapabilities extends BaseModel {
         allowNull: false,
       },
       index: {
-        type: app.Sequelize.DataTypes.INTEGER,
+        type: app.Sequelize.DataTypes.STRING,
         allowNull: false,
       },
       name: {

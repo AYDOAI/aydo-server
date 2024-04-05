@@ -27,7 +27,7 @@ export const IPC = toMixin(parent => class IPC extends parent {
     });
 
     const newIPC = () => {
-      const ipc = require('node-ipc');
+      const ipc = require('node-ipc').default;
 
       ipc.config.id = 'app';
       ipc.config.retry = 1500;
@@ -85,7 +85,7 @@ export const IPC = toMixin(parent => class IPC extends parent {
             this.getAllItems(data.tableName).then(result => {
               ipc.server.emit(socket, EventTypes.DatabaseGetAllItems, {id: data.id, result});
             }).catch(error => {
-              this.errorEx('', error);
+              this.error('', error);
             });
           }
         },
@@ -95,7 +95,7 @@ export const IPC = toMixin(parent => class IPC extends parent {
             this.updateItem(data.tableName, data.options, data.where).then(result => {
               ipc.server.emit(socket, EventTypes.DatabaseUpdateItem, {id: data.id, result});
             }).catch(error => {
-              this.errorEx('', error);
+              this.error('', error);
             });
           }
         },
@@ -105,7 +105,7 @@ export const IPC = toMixin(parent => class IPC extends parent {
             this.createItem(data.tableName, data.options).then(result => {
               ipc.server.emit(socket, EventTypes.DatabaseCreateItem, {id: data.id, result});
             }).catch(error => {
-              this.errorEx('', error);
+              this.error('', error);
             });
           }
         },
@@ -126,11 +126,11 @@ export const IPC = toMixin(parent => class IPC extends parent {
                     zone_id: device.db_device.zone_id,
                     zone_name: device.db_device.zone ? device.db_device.zone.name : '',
                     // params: device.db_device.getParams(),
-                    class_name: device.className,
+                    class_name: device.class_name,
                     process_id: device.processId
                   };
-                  if (data && data.currentStatus) {
-                    item.currentStatus = device.currentStatus;
+                  if (data && data.current_status) {
+                    item.current_status = device.current_status;
                   }
                   // if (data && data.deviceParams) {
                   //   item.deviceParams = device.getParams(index, data.target);
@@ -141,8 +141,8 @@ export const IPC = toMixin(parent => class IPC extends parent {
                   if (data && data.rangeMax && device.rangeMax) {
                     item.rangeMax = device.rangeMax;
                   }
-                  if (data && data.pluginTemplate && device.pluginTemplate && !device.pluginSubDevice) {
-                    item.pluginTemplate = device.pluginTemplate;
+                  if (data && data.plugin_template && device.plugin_template && !device.pluginSubDevice) {
+                    item.plugin_template = device.plugin_template;
                   }
                   if (data && data.supportSetVolume) {
                     item.supportSetVolume = device.supportSetVolume;
@@ -249,25 +249,25 @@ export const IPC = toMixin(parent => class IPC extends parent {
         {
           name: EventTypes.Notify,
           method: (data, socket) => {
-            this.ws.sendNotify(data.message);
+            // this.ws.sendNotify(data.message);
           }
         },
         {
           name: EventTypes.NotifyEx,
           method: (data, socket) => {
-            this.ws.sendNotifyEx(data);
+            // this.ws.sendNotifyEx(data);
           }
         },
         {
           name: EventTypes.SendNotification,
           method: (data, socket) => {
-            this.cloud.sendNotification(data);
+            // this.cloud.sendNotification(data);
           }
         },
         {
           name: EventTypes.Exception,
           method: (data, socket) => {
-            this.ws.sendException(data.message);
+            // this.ws.sendException(data.message);
           }
         },
         {
@@ -409,11 +409,11 @@ export const IPC = toMixin(parent => class IPC extends parent {
         {
           name: EventTypes.ApplicationWsReceive,
           method: (data, socket) => {
-            this.ws.receive({
-              id: data.socket_id, connected: data.socket_connected, emit: (method, data) => {
-                ipc.server.emit(socket, EventTypes.ApplicationWsEmit, {id: data.id, method, data});
-              }
-            }, data.method, data.data, true);
+            // this.ws.receive({
+            //   id: data.socket_id, connected: data.socket_connected, emit: (method, data) => {
+            //     ipc.server.emit(socket, EventTypes.ApplicationWsEmit, {id: data.id, method, data});
+            //   }
+            // }, data.method, data.data, true);
           }
         },
         {
@@ -425,7 +425,7 @@ export const IPC = toMixin(parent => class IPC extends parent {
                 device_id: device.id, event: data.event, update: (data1) => {
                   this.request(`driver-${data.parent_id}`, 'subscribe-device', {
                     ident: device.ident,
-                    currentStatus: device.currentStatus
+                    current_status: device.current_status
                   }).then(() => {
                   }).catch(error => {
                   });

@@ -9,6 +9,7 @@ export class DeviceController extends BaseController {
   routes(router) {
     router.get('/api/v3/devices', this.get.bind(this));
     this.beforeRequest(router, 'post', '/api/v3/devices', this.post, false, true, false, null, 'add_devices');
+    this.beforeRequest(router, 'post', '/api/v3/devices/settings/:id', this.postSettings, false, true, false, null, 'add_devices');
   }
 
   devices(req, created = null) {
@@ -84,5 +85,35 @@ export class DeviceController extends BaseController {
       res.error(e);
     }
   };
+
+  postSettings(req, res) {
+    const device = this.app.findDeviceById(parseInt(req.params.id));
+    if (device) {
+      req.body.device_id = device.id;
+      const where = {device_id: req.body.device_id, key: req.body.key};
+      this.app.getItem(DbTables.DeviceSettings, where, true).then(data => {
+        if (data) {
+          Object.keys(req.body).forEach(key => {
+            data[key] = req.body[key];
+          });
+          this.app.updateItem(DbTables.DeviceSettings, data, {id: data.id}).then((data) => {
+            res.success({id: data.id});
+          }).catch(error => {
+            res.error(error);
+          })
+        } else {
+          this.app.createItem(DbTables.DeviceSettings, req.body).then((data) => {
+            res.success({id: data.id});
+          }).catch(error => {
+            res.error(error);
+          })
+        }
+      }).catch(error => {
+        res.error(error);
+      });
+    } else {
+      res.error({message: 'Device not found.'});
+    }
+  }
 
 }

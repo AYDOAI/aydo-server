@@ -41,11 +41,11 @@ export const Connect = toMixin(parent => class Connect extends parent {
             this.device = {};
           }
           if (this.getSubDevices && !this.getParam('disable_scan_sub_devices')) {
-            this.app.publishEx(this.app.eventTypeConnected(this.class_name), {id: `${this.app.eventTypeConnected(this.class_name)}->${this.id}`}, this);
+            this.app.publishEx(this.app.event_type_connected(this.class_name), {id: `${this.app.event_type_connected(this.class_name)}->${this.id}`}, this);
           }
           setInterval(() => {
-            this.currentStatus.updated_at = new Date().getTime() / 1000;
-            // this.app.publishEx(EventTypes.UpdateSensorEx, this.class_name, this.currentStatus, this);
+            this.current_status.updated_at = new Date().getTime() / 1000;
+            // this.app.publishEx(EventTypes.UpdateSensorEx, this.class_name, this.current_status, this);
           }, 5000);
           resolve({});
         } else {
@@ -55,7 +55,7 @@ export const Connect = toMixin(parent => class Connect extends parent {
             } else {
               if (this.getSubDevices && !this.getParam('disable_scan_sub_devices')) {
                 this.getSubDevices().then(() => {
-                  this.app.publishEx(this.app.eventTypeConnected(this.class_name), {id: `${this.app.eventTypeConnected(this.class_name)}->${this.id}`}, this);
+                  this.app.publishEx(this.app.event_type_connected(this.class_name), {id: `${this.app.event_type_connected(this.class_name)}->${this.id}`}, this);
                 }).catch(() => {
                 });
               }

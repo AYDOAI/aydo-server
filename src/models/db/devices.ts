@@ -4,6 +4,14 @@ export class Devices extends BaseModel {
 
   constructor(app) {
     super(app, 'devices', {
+      ident: {
+        type: app.Sequelize.DataTypes.STRING,
+        allowNull: false,
+      },
+      identifier: {
+        type: app.Sequelize.DataTypes.STRING,
+        allowNull: true,
+      },
       name: {
         type: app.Sequelize.DataTypes.STRING,
         allowNull: false,
@@ -56,26 +64,26 @@ export class Devices extends BaseModel {
         {
           model: models.drivers.model,
         },
-          {
-            model: models.zones.model,
+        {
+          model: models.zones.model,
+        },
+        {
+          model: models.users.model,
+        },
+        {
+          model: models.device_capabilities.model,
+          where: {
+            deleted_at: null
           },
-          {
-            model: models.users.model,
+          required: false,
+        },
+        {
+          model: models.device_settings.model,
+          where: {
+            deleted_at: null
           },
-        //   {
-        //     model: models.device_capabilities.model,
-        //     where: {
-        //       deleted_at: null
-        //     },
-        //     required: false,
-        //   },
-        //   {
-        //     model: models.device_settings.model,
-        //     where: {
-        //       deleted_at: null
-        //     },
-        //     required: false,
-        //   },
+          required: false,
+        },
       ]
     };
     this.validationFields = {

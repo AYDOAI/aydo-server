@@ -100,10 +100,10 @@ export const Devices = toMixin(base => class Devices extends base {
           if (!this.drivers[device.driver.class_name]) {
             this.log(`Driver not exists: ${device.driver.class_name}`);
             ready();
-          } else if (device.driver && !this.devices[device.id]) {
+          } else if (device.driver && !this.devices[device.ident]) {
             if (!device.disabled) {
               this.createDevice(device.driver.class_name, device).then((driver: any) => {
-                this.devices[device.id] = driver;
+                this.devices[device.ident] = driver;
                 this.addConnectQueue(driver.initMethod ? driver.initMethod : 'init', driver, true);
                 ready();
               }).catch((error) => {
@@ -163,7 +163,7 @@ export const Devices = toMixin(base => class Devices extends base {
           }).catch((error) => {
             input.device.setInitialized(ConnectionStates.Disconnected).then(() => {
             });
-            this.errorEx(`${input.device.ident}.connectQueue`, error);
+            this.error(`${input.device.ident}.connectQueue`, error);
             this.addConnectQueue('connect', input.device);
             callback(error, null);
           });
@@ -179,7 +179,7 @@ export const Devices = toMixin(base => class Devices extends base {
               this.publishEx('device-connect', input.device, false, null, input.device.checkLastConnect());
             });
             if (!error || !error.ignore) {
-              input.device.errorEx(error);
+              input.device.error(error);
             }
             this.addConnectQueue(input.type, input.device);
             callback(error, null);

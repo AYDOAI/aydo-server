@@ -24,21 +24,21 @@ export const Connect2 = toMixin(parent => class Connect2 extends parent {
     return 'connectEx';
   }
 
-  get address() {
-    return this.getParam('address');
-  }
-
-  set address(value) {
-    this.db_device.setParam('address', value);
-    this.emit('device-params-changed');
-  }
+  // get address() {
+  //   return this.getParam('address');
+  // }
+  //
+  // set address(value) {
+  //   this.db_device.setParam('address', value);
+  //   this.emit('device-params-changed');
+  // }
 
   initDevice() {
     return new Promise((resolve, reject) => {
       this.initDeviceEx(() => {
         this.setInitialized(ConnectionStates.DeviceInitialized).then(() => {
         });
-        if (this.connectSubDevicesAfterParent && this.getParam('parent_id') && this.parent_class_name && !this.app.ready) {
+        if (this.connect_sub_devices_after_parent && this.db_device['parent_id'] && this.parent_class_name && !this.app.ready) {
         } else {
           this.app.addConnectQueue('connectEx', this, true);
         }

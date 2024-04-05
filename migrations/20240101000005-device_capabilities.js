@@ -24,7 +24,7 @@ async function up({context: queryInterface}) {
       "allowNull": false
     },
     "index": {
-      "type": Sequelize.INTEGER,
+      "type": Sequelize.STRING,
       "allowNull": false
     },
     "name": {

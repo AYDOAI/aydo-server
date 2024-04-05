@@ -30,22 +30,22 @@ export const Dynamic = toMixin(parent => class Dynamic extends parent {
 
   startServerEx(id, restart = true) {
     return new Promise((resolve, reject) => {
-      if (!this.pluginSubDevice) {
+      if (!this.plugin_sub_device) {
         const start = () => {
           let moduleName;
           const options: any = {maxBuffer: 50 * 1024 * 1024};
           const names: any = [{
-            filename: path.join(process.cwd(), `../plugins/${this.driverModuleName}/dist/src/${this.driverModuleName}.js`),
+            filename: path.join(process.cwd(), `../plugins/${this.driver_module_name}/dist/src/${this.driver_module_name}.js`),
             command: 'node',
-            directory: path.join(process.cwd(), `../plugins/${this.driverModuleName}/dist/src/`),
-            args: [path.join(process.cwd(), `../plugins/${this.driverModuleName}/dist/src/${this.driverModuleName}.js`), id]
+            directory: path.join(process.cwd(), `../plugins/${this.driver_module_name}/dist/src/`),
+            args: [path.join(process.cwd(), `../plugins/${this.driver_module_name}/dist/src/${this.driver_module_name}.js`), id]
           }, {
-            filename: this.app.moduleName(`./plugins/${this.driverModuleName}.js`),
+            filename: this.app.moduleName(`./plugins/${this.driver_module_name}.js`),
             command: 'node',
-            args: [this.app.moduleName(`./plugins/${this.driverModuleName}.js`), id]
+            args: [this.app.moduleName(`./plugins/${this.driver_module_name}.js`), id]
           }, {
-            filename: this.app.moduleName(`./plugins/${this.driverModuleName}`),
-            command: this.app.moduleName(`./plugins/${this.driverModuleName}`),
+            filename: this.app.moduleName(`./plugins/${this.driver_module_name}`),
+            command: this.app.moduleName(`./plugins/${this.driver_module_name}`),
             args: [id]
           }];
           names.forEach(name => {
@@ -60,17 +60,17 @@ export const Dynamic = toMixin(parent => class Dynamic extends parent {
           this.app.log(`Start: ${moduleName.command} ${JSON.stringify(moduleName.args)}${options.cwd ? `; directory: ${options.cwd}` : ''}`)
           let device = spawn(moduleName.command, moduleName.args, options);
           this.processId = device.pid;
-          const logModuleName = `${this.driverModuleName}-${this.id}`;
+          const logModuleName = `${this.driver_module_name}-${this.id}`;
           device.stdout.on('data', (data) => {
             const data1 = removeLast(data.toString());
-            this.app.logModule(logModuleName, data1);
+            this.app.log(logModuleName, data1);
             if (this.app.config.log.console === true) {
               console.log(logModuleName, data1);
             }
           });
           device.stderr.on('data', (data) => {
             const data1 = removeLast(data.toString());
-            this.app.errorModule(logModuleName, data1);
+            this.app.error(logModuleName, data1);
             if (this.app.config.log.console === true) {
               console.log(logModuleName, data1);
             }
@@ -80,9 +80,9 @@ export const Dynamic = toMixin(parent => class Dynamic extends parent {
             device = null;
             let cmd;
             if (os.platform() === 'darwin') {
-              cmd = `ps -A | grep " node " | grep "${this.driverModuleName}.js ${id}" | awk '{print $1}' | xargs kill -9 $1`
+              cmd = `ps -A | grep " node " | grep "${this.driver_module_name}.js ${id}" | awk '{print $1}' | xargs kill -9 $1`
             } else {
-              cmd = `ps -A -F | grep " node " | grep "${this.driverModuleName}.js ${id}" | awk '{print $2}' | xargs kill -9 $1`
+              cmd = `ps -A -F | grep " node " | grep "${this.driver_module_name}.js ${id}" | awk '{print $2}' | xargs kill -9 $1`
             }
             this.app.log(`kill_process: ${cmd}`);
             const ps = spawn(cmd, [], {shell: true});
@@ -142,7 +142,7 @@ export const Dynamic = toMixin(parent => class Dynamic extends parent {
       devices.forEach(device => {
         device._disabled = disabled;
       })
-    } else if (this.pluginSubDevice || this.pluginTemplate.update_config) {
+    } else if (this.pluginSubDevice || this.plugin_template.update_config) {
       this.deviceCommand({command: 'update_settings', data: this.getParams()}).then(() => {
       }).catch(() => {
       })
@@ -150,31 +150,35 @@ export const Dynamic = toMixin(parent => class Dynamic extends parent {
   }
 
   initDeviceEx(resolve, reject) {
-    if (this.pluginSubDevice) {
+    if (this.plugin_sub_device) {
       this.device = {};
       resolve({});
     } else {
-      this.app.request(`driver-${this.id}`, 'init-device', {
-        server_id: this.app.config.identifier,
-        environment: this.app.config.environment,
-        internal_port: this.app.config.port,
-        internal_ip: this.app.internal_ip,
-        cloud: this.app.config.cloud ? !!this.app.config.cloud.cloud : false,
-        ident: this.ident,
-        // params: this.db_device.getParams(),
-        log_path: this.app.config.log.path,
-        path: this.app.applicationPath(__dirname, true),
-        pid: process.pid,
-      }).then(() => {
-        resolve({});
-      }).catch(error => {
-        reject(error);
-      });
+      const timeout = !this.first_init ? 2000 : 0;
+      this.first_init = true;
+      setTimeout(() => {
+        this.app.request(`driver-${this.id}`, 'init-device', {
+          server_id: this.app.config.identifier,
+          environment: this.app.config.environment,
+          internal_port: this.app.config.port,
+          internal_ip: this.app.internal_ip,
+          cloud: this.app.config.cloud ? !!this.app.config.cloud.cloud : false,
+          ident: this.ident,
+          params: this.getParams(),
+          log_path: this.app.config.log.path,
+          path: this.app.applicationPath(__dirname, true),
+          pid: process.pid,
+        }).then(() => {
+          resolve({});
+        }).catch(error => {
+          reject(error);
+        });
+      }, timeout);
     }
   }
 
   connectEx(resolve, reject) {
-    if (this.pluginSubDevice) {
+    if (this.plugin_sub_device) {
       const check = () => {
         const result = this.parent && this.parent.connectionState === ConnectionStates.Connected;
         if (result) {
@@ -193,7 +197,7 @@ export const Dynamic = toMixin(parent => class Dynamic extends parent {
             if (count > 10) {
               clearInterval(interval);
               reject({
-                message: `${this.driverModuleName}: Parent device ${this.parent_class_name} not ready`,
+                message: `${this.driver_module_name}: Parent device ${this.parent_class_name} not ready`,
                 ignore: true,
                 code: 'PARENT_DEVICE_NOT_READY'
               });
@@ -203,7 +207,7 @@ export const Dynamic = toMixin(parent => class Dynamic extends parent {
       }
     } else {
       this.app.request(`driver-${this.id}`, 'connect-device', {}).then(() => {
-        this.app.publishEx(this.app.eventTypeConnected(this.class_name), {id: `${this.app.eventTypeConnected(this.class_name)}->${this.id}`}, this);
+        this.app.publishEx(this.app.event_type_connected(this.class_name), {id: `${this.app.event_type_connected(this.class_name)}->${this.id}`}, this);
         resolve({});
       }).catch(error => {
         reject(error);
@@ -231,7 +235,7 @@ export const Dynamic = toMixin(parent => class Dynamic extends parent {
         command,
         value,
         options,
-        status: device ? this.currentStatus : {},
+        status: device ? this.current_status : {},
         // params: device ? device.db_device.getParams() : {}
       }).then((result) => {
         if (result && result.update_settings) {
@@ -250,7 +254,7 @@ export const Dynamic = toMixin(parent => class Dynamic extends parent {
           });
           if (result.force_status) {
             Object.keys(result.force_status).forEach(key => {
-              this.currentStatus[key] = result.force_status[key];
+              this.current_status[key] = result.force_status[key];
             });
           }
           device.queueUpdateEx();

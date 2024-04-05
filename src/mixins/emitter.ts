@@ -201,12 +201,12 @@ export const Emitter = toMixin(base => class Emitter extends base {
     callback(null, null);
   }
 
-  eventTypeConnected(className) {
-    return `connected->${className}`;
+  event_type_connected(class_name) {
+    return `connected->${class_name}`;
   }
 
-  eventTypeStatus(className, identifier = null, key = null) {
-    return `status->${className}${identifier ? `->${identifier}` : ''}${key ? `->${key}` : ''}`;
+  event_type_status(class_name, identifier = null, key = null) {
+    return `status->${class_name}${identifier ? `->${identifier}` : ''}${key ? `->${key}` : ''}`;
   }
 
 });

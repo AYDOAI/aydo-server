@@ -9,6 +9,7 @@ import {Event} from './mixins/event';
 import {DeviceFunctions} from './mixins/device-functions';
 import {DeviceDisplay} from './mixins/device-display';
 import {Settings} from './mixins/settings';
+import {DbTables} from '../models/db-tables';
 
 const {toExtendable} = require('../../lib/foibles');
 
@@ -24,6 +25,7 @@ export const BaseDriver = toExtendable(class BaseDriver extends Base.with(Queue,
   db_device: any;
   db_driver: any = null;
   name: string;
+  current_status = {};
 
   constructor(app, device, options) {
     super(app, device, options);
@@ -38,8 +40,36 @@ export const BaseDriver = toExtendable(class BaseDriver extends Base.with(Queue,
     this.onCreate();
   }
 
+  _connectionState: number = 0;
+
+  get connectionState(): ConnectionStates {
+    if (this._connectionState & 2 && this._connectionState & 8) {
+      return ConnectionStates.Disconnected;
+    } else if (this._connectionState & 4 && this._connectionState & 2 && this._connectionState & 1) {
+      return ConnectionStates.Connected;
+    } else if (this._connectionState & 4) {
+      return ConnectionStates.ConnectedNotInitialized;
+    } else if (this._connectionState & 2 && this._connectionState & 1) {
+      return ConnectionStates.DeviceInitialized;
+    } else if (this._connectionState & 1) {
+      return ConnectionStates.Initialized;
+    } else if (this._connectionState === 0) {
+      return ConnectionStates.Undefined;
+    } else {
+      return ConnectionStates.Undefined;
+    }
+  }
+
   get id() {
     return this.db_device ? this.db_device.id : null;
+  }
+
+  get ident() {
+    return this.db_device && this.db_device.ident ? this.db_device.ident : this.db_device.id;
+  }
+
+  get capabilities() {
+    return this.db_device.device_capabilities;
   }
 
   destroyDevice() {
@@ -172,7 +202,7 @@ export const BaseDriver = toExtendable(class BaseDriver extends Base.with(Queue,
           this.app.publishEx('device-connect', this, false, null, this.checkLastConnect());
           this.destroyDevice();
           if (!error || !error.ignore) {
-            this.errorEx(error);
+            this.error(error);
           }
           reject(error);
         });
@@ -182,6 +212,99 @@ export const BaseDriver = toExtendable(class BaseDriver extends Base.with(Queue,
 
   checkLastConnect() {
     return false;
+  }
+
+  getParams() {
+    const result = {};
+    this.db_device.device_settings.forEach(item => {
+      result[item.key] = item.value;
+    });
+    return result;
+  }
+
+  checkSubDevice(model, key, name, params, zone_id = null, parent = null) {
+    const key1 = key !== undefined && key !== null && key !== '' ? (params && params.force_ident ? key : `${this.ident}_${key}`) : null;
+    return this.app.checkSubDevice(this.class_name, key1, model, name, params, zone_id, parent);
+  }
+
+  deviceCommand(data) {
+    // this.app.log(`BaseDriver-deviceCommand(${data ? `${data.command} ${data.value}` : ''})`);
+    return new Promise((resolve, reject) => {
+      const onSuccess = (data) => {
+        resolve(data);
+      };
+      const onError = (error) => {
+        reject(error);
+      };
+      if (this.disabled) {
+        resolve({});
+      } else if (!this.emit(`device-command-${data.command}`, data, onSuccess, onError)) {
+        reject({message: `Command ${data.command} not found`});
+      }
+    });
+  }
+
+  getIcon() {
+    return this.icon;
+  }
+
+  log(...message) {
+    console.log(...arguments);
+  }
+
+  error(...message) {
+    console.error(...arguments);
+  }
+
+  getParent(current = null, ident = 'parent_id', last = 'lastParent', int = true, ident2 = 'id') {
+    if (!this[last]) {
+      this[last] = {};
+    }
+    if (!current) {
+      current = this;
+    }
+    const parent_id = int ? parseInt(current.db_device[ident]) : current.db_device[ident];
+    if (!parent_id) {
+      return null;
+    }
+    if (this[last][current.id] &&
+      this[last][current.id].parent_id === parent_id &&
+      this[last][current.id].parent) {
+      return this[last][current.id].parent;
+    }
+    let result = null;
+    Object.keys(this.app.devices).forEach(key => {
+      const device = this.app.devices[key];
+      if (device[ident2] === parent_id) {
+        result = device;
+      }
+    });
+    this[last][current.id] = {
+      parent: result,
+      parent_id: parent_id,
+    };
+    return result;
+  }
+
+  updateCapabilities(capabilities) {
+    capabilities.forEach(capability => {
+      const cap = this.db_device.device_capabilities.find(item => item.ident === capability.ident && item.index === capability.index);
+      if (!cap) {
+        capability.device_id = this.db_device.id;
+        capability.index = capability.index ? capability.index : '';
+        capability.name = capability.name ? capability.name : '';
+        capability.display_name = capability.display_name ? capability.display_name : '';
+        capability.value = capability.value ? capability.value : '';
+        capability.hidden = capability.hidden ? capability.hidden : false;
+        capability.disabled = capability.disabled ? capability.disabled : false;
+        capability.options = JSON.stringify(capability.options ? capability.options : {});
+        capability.params = JSON.stringify(capability.params ? capability.params : {});
+        this.app.createItem(DbTables.DeviceCapabilities, capability).then(() => {
+        }).catch(error => {
+          this.error(error);
+        });
+      }
+    })
   }
 
 });
