@@ -1,6 +1,16 @@
+import * as path from 'path';
+
 import {toExtendable, Extendable, Mixin} from '../lib/foibles';
 import {RequireEx} from '../lib/require-ex';
+import {getDeviceIdent} from '../lib/shared';
+import * as BetterQueue from '../lib/better-queue/queue';
+
+import {Controllers} from './controllers';
+
 import {ConfigFile} from './models/config-file';
+import {EventTypes} from './models/event-types';
+import {DbTables} from './models/db-tables';
+
 import {Config} from './mixins/config';
 import {Log} from './mixins/log';
 import {Database} from './mixins/database';
@@ -9,12 +19,7 @@ import {Emitter} from './mixins/emitter';
 import {Drivers} from './mixins/drivers';
 import {Devices} from './mixins/devices';
 import {IPC} from './mixins/ipc';
-import {Controllers} from './controllers';
-import * as path from 'path';
-import {EventTypes} from './models/event-types';
-import {getDeviceIdent} from '../lib/shared';
-import * as BetterQueue from '../lib/better-queue/queue';
-import {DbTables} from './models/db-tables';
+import {Cloud} from './mixins/cloud';
 
 const Base = toExtendable(class BaseClass {
 
@@ -34,6 +39,7 @@ type Log = Mixin<typeof Log>;
 type RestApi = Mixin<typeof RestApi>;
 type Drivers = Mixin<typeof Drivers>;
 type Devices = Mixin<typeof Devices>;
+type Cloud = Mixin<typeof Cloud>;
 
 export interface AppOptions {
   requireEx: RequireEx;
@@ -41,7 +47,8 @@ export interface AppOptions {
   configPath: string;
 }
 
-export class App extends Base.with(Config, Database, Emitter, Log, RestApi, Drivers, Devices, IPC) {
+// @ts-ignore
+export class App extends Base.with(Config, Database, Emitter, Log, RestApi, Drivers, Devices, IPC, Cloud) {
   version = '3.0.0';
   requireEx: RequireEx;
   subDeviceTimeouts = {};
