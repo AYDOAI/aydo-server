@@ -79,11 +79,17 @@ function initRoutes(app) {
     }
     if (!exists) {
       if ((req.method === 'GET' && res.method === '/')) {
-        return res.status(200).send('<html>' +
-          '<body>' +
-          '<p>The web interface is available in the cloud version.</p>' +
-          '</body>' +
-          '</html>');
+        return res.status(200).send(`
+<html>
+<body>
+<p>Please scan this QR-code in the application.</p>
+<p style="color: gray;">will be implemented later.</p>
+<p>... or enter this fields manually:</p>
+<p>Hub identifier: ${app.identifier}</p>
+<p>Hub token: ${app.token}</p>
+</body>
+</html>
+`);
       } else {
         return res.error({message: 'Unauthenticated'}, 401)
       }
