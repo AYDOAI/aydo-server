@@ -52,6 +52,19 @@ export class Plugin extends BaseDriver.with(Connect2, Dynamic) {
     return (this.plugin_sub_device ? this.plugin_sub_device_template.support_autoupdate : this.plugin_template.support_autoupdate);
   }
 
+  get icon() {
+    return this.plugin_template.icon;
+  }
+
+  get driver_type() {
+    return this.plugin_sub_device ? this.plugin_sub_device_template.type : this.plugin_template.type;
+  }
+
+  get driver_settings() {
+    return this.plugin_sub_device ? this.plugin_sub_device_template.settings : this.plugin_template.settings;
+  }
+
+
   validateParams(params) {
     return true;
   }

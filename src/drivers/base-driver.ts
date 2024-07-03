@@ -64,12 +64,24 @@ export const BaseDriver = toExtendable(class BaseDriver extends Base.with(Queue,
     return this.db_device ? this.db_device.id : null;
   }
 
+  get driver_id() {
+    return this.db_driver ? this.db_driver.id : null;
+  }
+
+  get driver_name() {
+    return this.db_driver ? this.db_driver.name : null;
+  }
+
   get ident() {
     return this.db_device && this.db_device.ident ? this.db_device.ident : this.db_device.id;
   }
 
   get capabilities() {
     return this.db_device.device_capabilities;
+  }
+
+  get driver_settings() {
+    return [];
   }
 
   destroyDevice() {

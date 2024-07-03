@@ -125,7 +125,7 @@ export class App extends Base.with(Config, Database, Emitter, Log, RestApi, Driv
                 callback(error, null);
               });
             } else if (!this.database.devices.items.find(item => item.ident === input.ident && !item.deleted_at)) {
-              const icon = this.drivers[input.model].getIcon();
+              const icon = this.drivers[input.model].icon;
               if (!input.name) {
                 input.name = this.drivers[input.model].driver_name;
               }
