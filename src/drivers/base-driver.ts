@@ -68,6 +68,10 @@ export const BaseDriver = toExtendable(class BaseDriver extends Base.with(Queue,
     return this.db_driver ? this.db_driver.id : null;
   }
 
+  get device_name() {
+    return this.db_device ? this.db_device.name : null;
+  }
+
   get driver_name() {
     return this.db_driver ? this.db_driver.name : null;
   }
@@ -300,7 +304,7 @@ export const BaseDriver = toExtendable(class BaseDriver extends Base.with(Queue,
 
   updateCapabilities(capabilities) {
     capabilities.forEach(capability => {
-      const cap = this.db_device.device_capabilities.find(item => item.ident === capability.ident && item.index === capability.index);
+      const cap = this.db_device.device_capabilities.find(item => item.ident === capability.ident && ((!capability.index && item.index === '') || item.index == capability.index));
       if (!cap) {
         capability.device_id = this.db_device.id;
         capability.index = capability.index ? capability.index : '';

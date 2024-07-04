@@ -18,7 +18,7 @@ export class DeviceSettings extends BaseModel {
       },
       description: {
         type: app.Sequelize.DataTypes.STRING,
-        allowNull: false,
+        allowNull: true,
       },
       type: {
         type: app.Sequelize.DataTypes.STRING,
@@ -26,7 +26,7 @@ export class DeviceSettings extends BaseModel {
       },
       default_value: {
         type: app.Sequelize.DataTypes.STRING,
-        allowNull: false,
+        allowNull: true,
       },
       params: {
         type: app.Sequelize.DataTypes.STRING,

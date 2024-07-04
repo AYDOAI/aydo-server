@@ -57,33 +57,11 @@ export class DeviceController extends BaseController {
   };
 
   post(req, res) {
-    const driver = this.app.findDriverByClassName(req.body.class_name);
-    try {
-      if (driver && driver.validateParams(req.body.params)) {
-        req.body.driver_id = driver.db_driver.id;
-        delete req.body.class_name;
-        req.body.user_id = req.client.user.id;
-        this.app.createItem(DbTables.Devices, req.body).then((data) => {
-          this.app.publishEx(EventTypes.DeviceCreate, {id: `${EventTypes.DeviceCreate}->${data.id}`}, {
-            id: data.id,
-            user_id: req.body.user_id,
-            driver_id: req.body.driver_id,
-          }).then(() => {
-            this.app.devicesCache = null;
-            // this.app.ws.sendToAll('notify', {system: true, type: 'device-create'});
-            this.getDevices(req, res, data);
-          });
-        }).catch(error => {
-          res.error(error);
-        })
-      } else if (driver) {
-        res.error({message: 'Validation error.'});
-      } else {
-        res.error({message: 'Driver not found.'});
-      }
-    } catch (e) {
-      res.error(e);
-    }
+    this.app.newDevice(req.client.user.id, req.body).then((data) => {
+      this.getDevices(req, res, data);
+    }).catch(error => {
+      res.error(error);
+    });
   };
 
   postSettings(req, res) {

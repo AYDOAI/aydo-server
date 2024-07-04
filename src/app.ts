@@ -252,7 +252,9 @@ export class App extends Base.with(Config, Database, Emitter, Log, RestApi, Driv
         this.publishEx(EventTypes.DeviceCreate, {id: `${EventTypes.DeviceCreate}->${ident}`}, data);
         clearTimeout(this.subDeviceTimeouts[ident]);
         this.subDeviceTimeouts[ident] = setTimeout(() => {
-          this.publishEx(this.app.event_type_connected(class_name), {id: `${this.app.event_type_connected(class_name)}->${ident}`}, parent);
+          // @ts-ignore
+          this.publishEx(this.event_type_connected(class_name), {id: `${this.event_type_connected(class_name)}->${ident}`}, parent);
+          this.restart();
         }, 5000);
         resolve(data);
       }).catch((error) => {
@@ -268,6 +270,84 @@ export class App extends Base.with(Config, Database, Emitter, Log, RestApi, Driv
   require(ident, require1 = false) {
     return new Promise((resolve) => {
       resolve(require(ident))
+    });
+  }
+
+  newDevice(user_id: number, body: any) {
+    return new Promise((resolve, reject) => {
+      const driver = this.findDriverByClassName(body.class_name);
+      try {
+        if (driver && driver.validateParams(body.params)) {
+          body.driver_id = driver.db_driver.id;
+          // @ts-ignore
+          delete body.class_name;
+          body.user_id = user_id;
+          this.createItem(DbTables.Devices, body).then((data) => {
+            this.newDeviceSettings(driver, data.id, body.settings).then(() => {
+              this.publishEx(EventTypes.DeviceCreate, {id: `${EventTypes.DeviceCreate}->${data.id}`}, {
+                id: data.id,
+                user_id: body.user_id,
+                driver_id: body.driver_id,
+              }).then(() => {
+                this.devicesCache = null;
+                this.restart();
+                resolve(data);
+              });
+            });
+          }).catch(error => {
+            reject(error);
+          })
+        } else if (driver) {
+          reject({message: 'Validation error.'});
+        } else {
+          reject({message: 'Driver not found.'});
+        }
+      } catch (e) {
+        reject(e);
+      }
+    })
+  }
+
+  restart() {
+    clearTimeout(this.restartTimeout);
+    this.restartTimeout = setTimeout(() => {
+      process.exit();
+    }, 10000);
+  }
+
+  newDeviceSettings(driver, device_id, settings) {
+    return new Promise((resolve, reject) => {
+      if (settings) {
+        const where = {device_id};
+        this.getItem(DbTables.DeviceSettings, where, true).then(data => {
+          const promises = [];
+          if (!data) {
+            driver.driver_settings.forEach(setting => {
+              const body = Object.assign({device_id}, setting);
+              body.value = settings[setting.key];
+              if (!body.description) {
+                body.description = '';
+              }
+              if (!body.default_value) {
+                body.default_value = '';
+              }
+              if (!body.params) {
+                body.params = '{}';
+              }
+              promises.push(this.createItem(DbTables.DeviceSettings, body));
+            });
+          }
+          Promise.all(promises).then(data => {
+            resolve(data);
+          }).catch(error => {
+            reject(error);
+          })
+        }).catch(error => {
+          reject(error);
+        });
+      } else {
+        resolve({});
+      }
     });
   }
 

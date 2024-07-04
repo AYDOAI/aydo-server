@@ -64,7 +64,6 @@ export class Plugin extends BaseDriver.with(Connect2, Dynamic) {
     return this.plugin_sub_device ? this.plugin_sub_device_template.settings : this.plugin_template.settings;
   }
 
-
   validateParams(params) {
     return true;
   }
