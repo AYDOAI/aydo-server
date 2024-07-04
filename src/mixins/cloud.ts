@@ -105,8 +105,8 @@ export const Cloud = toMixin(base => class Cloud extends base {
             index: cap.index,
             name: cap.name,
             displayName: cap.display_name,
-            options: cap.options,
-            params: cap.params,
+            options: cap.options ? JSON.parse(cap.options) : null,
+            params: cap.params ? JSON.parse(cap.params) : null,
             value: cap.value,
             hidden: cap.hidden,
             disabled: cap.disabled,
@@ -179,6 +179,10 @@ export const Cloud = toMixin(base => class Cloud extends base {
       }
     });
 
+  }
+
+  updateCapabilityValues(ident, identifier, values) {
+    this.ws.emit('update_device_capabilities', [{ident, identifier, values}]);
   }
 
 });

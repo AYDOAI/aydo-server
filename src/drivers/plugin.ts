@@ -163,6 +163,7 @@ export class Plugin extends BaseDriver.with(Connect2, Dynamic) {
         // }
       } else {
         this.emit('update_updated_at_now');
+        const updates = [];
         Object.keys(status).forEach(key => {
           //   if (status[key] === null) {
           //     status[key] = 0;
@@ -176,6 +177,11 @@ export class Plugin extends BaseDriver.with(Connect2, Dynamic) {
                 const cap = this.capabilities.find(item => key === `${item.ident}${item.index ? `_${item.index}` : ''}`);
                 if (cap || key === 'connected') {
                   this.app.mqtt.publish(`aydo/${identifier}/${cap ? `${cap.ident}/${cap.index}` : key}`, `${message}`);
+                  if (cap) {
+                    updates.push({ident: cap.ident, index: cap.index, value: message});
+                  } else {
+                    updates.push({ident: 'connected', value: message});
+                  }
                 }
               } catch (e) {
                 this.error(e);
@@ -239,7 +245,10 @@ export class Plugin extends BaseDriver.with(Connect2, Dynamic) {
           //   } else if (key.indexOf('tamper_') === 0 && (this.supportTamper || this.supportTamperEx)) {
           //     this.emit(`update_tamper`, status[key]);
             }
-        })
+        });
+        if (updates.length) {
+          this.app.updateCapabilityValues(this.ident, this.identifier, updates);
+        }
         // this.queueUpdateEx();
       }
     });
