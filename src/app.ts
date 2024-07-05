@@ -254,7 +254,7 @@ export class App extends Base.with(Config, Database, Emitter, Log, RestApi, Driv
         this.subDeviceTimeouts[ident] = setTimeout(() => {
           // @ts-ignore
           this.publishEx(this.event_type_connected(class_name), {id: `${this.event_type_connected(class_name)}->${ident}`}, parent);
-          this.restart();
+          // this.restart();
         }, 5000);
         resolve(data);
       }).catch((error) => {
@@ -290,7 +290,7 @@ export class App extends Base.with(Config, Database, Emitter, Log, RestApi, Driv
                 driver_id: body.driver_id,
               }).then(() => {
                 this.devicesCache = null;
-                this.restart();
+                // this.restart();
                 resolve(data);
               });
             });
