@@ -35,6 +35,10 @@ async function up({context: queryInterface}) {
       "type": Sequelize.STRING,
       "allowNull": false
     },
+    "unit": {
+      "type": Sequelize.STRING,
+      "allowNull": true
+    },
     "options": {
       "type": Sequelize.STRING,
       "allowNull": false

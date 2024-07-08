@@ -281,7 +281,7 @@ export class App extends Base.with(Config, Database, Emitter, Log, RestApi, Driv
           body.driver_id = driver.db_driver.id;
           // @ts-ignore
           delete body.class_name;
-          body.user_id = user_id;
+          // body.user_id = user_id;
           this.createItem(DbTables.Devices, body).then((data) => {
             this.newDeviceSettings(driver, data.id, body.settings).then(() => {
               this.publishEx(EventTypes.DeviceCreate, {id: `${EventTypes.DeviceCreate}->${data.id}`}, {

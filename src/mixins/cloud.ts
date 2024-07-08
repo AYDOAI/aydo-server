@@ -105,6 +105,7 @@ export const Cloud = toMixin(base => class Cloud extends base {
             index: cap.index,
             name: cap.name,
             displayName: cap.display_name,
+            unit: cap.unit,
             options: cap.options ? JSON.parse(cap.options) : null,
             params: cap.params ? JSON.parse(cap.params) : null,
             value: cap.value,

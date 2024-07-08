@@ -24,6 +24,10 @@ export class DeviceCapabilities extends BaseModel {
         type: app.Sequelize.DataTypes.STRING,
         allowNull: false,
       },
+      unit: {
+        type: app.Sequelize.DataTypes.STRING,
+        allowNull: true,
+      },
       options: {
         type: app.Sequelize.DataTypes.STRING,
         allowNull: false,
