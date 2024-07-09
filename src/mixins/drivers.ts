@@ -31,11 +31,13 @@ export const Drivers = toMixin(base => class Drivers extends base {
                 }, {
                   id: db_driver.id,
                 }).then(() => {
+                  this.registerDrivers();
                 }).catch(() => {
                 });
               }
             } else {
               driver.updateDriver();
+              this.registerDrivers();
             }
           } catch (e) {
             this.error(key, e);

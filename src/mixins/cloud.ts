@@ -21,14 +21,16 @@ export function arch() {
 
 export const Cloud = toMixin(base => class Cloud extends base {
 
-  cloud_ready = false;
-  drivers_ready = false;
-  drivers_send = false;
-  devices_ready = false;
-  devices_send = false;
+  cloudReady = false;
+  driversReady = false;
+  driversSend = false;
+  devicesReady = false;
+  devicesSend = false;
+  driversUpdateTimeout = null;
+  devicesUpdateTimeout = null;
 
   get url() {
-    return this.config.cloud && this.config.cloud.url ? this.config.cloud.url : 'http://127.0.0.1:3000';
+    return this.config.cloud && this.config.cloud.url ? this.config.cloud.url : 'https://app.aydo.ai';
   }
 
   get active() {
@@ -62,6 +64,63 @@ export const Cloud = toMixin(base => class Cloud extends base {
       });
     }
 
+    console.log(`connect: ${this.url}`);
+    this.ws = io.connect(this.url, {transports: ['websocket']});
+    this.ws.on('connect', () => {
+      console.log('', 'cloud', 'receive', 'connect');
+      registerGateway();
+    });
+    this.ws.on('disconnect', (error) => {
+      console.log('', 'cloud', 'receive', 'disconnect');
+      this.cloudReady = false;
+      this.driversSend = false;
+      this.devicesSend = false;
+    });
+    this.ws.on('gateway_registered', () => {
+      this.cloudReady = true;
+      if (this.driversReady && !this.driversSend) {
+        this.registerDrivers(true);
+      }
+      if (this.devicesReady && !this.devicesSend) {
+        this.registerDevices(true);
+      }
+    });
+    this.ws.on('request', (data) => {
+      console.log(data);
+      const id = data.id;
+      switch (data.method) {
+        case 'add_device':
+          this.newDevice(1, data.body).then((body) => {
+            this.ws.emit('response', {id, body});
+          }).catch(error => {
+            this.ws.emit('response', {id, error});
+          });
+          break;
+      }
+    });
+
+    this.subscribe(EventTypes.ApplicationDriverReady, () => {
+      this.driversReady = true;
+      if (!this.driversSend) {
+        this.registerDrivers();
+      }
+    });
+
+    this.subscribe(EventTypes.DeviceDone, () => {
+      this.devicesReady = true;
+      if (!this.devicesSend) {
+        this.registerDevices();
+      }
+    });
+
+  }
+
+  updateCapabilityValues(ident, identifier, values) {
+    this.ws.emit('update_device_capabilities', [{ident, identifier, values}]);
+  }
+
+  registerDrivers(force = false) {
+    clearTimeout(this.driversUpdateTimeout)
     const registerDrivers = () => {
       const drivers = [];
       Object.keys(this.drivers).forEach(class_name => {
@@ -78,9 +137,19 @@ export const Cloud = toMixin(base => class Cloud extends base {
         drivers.push(opts)
       })
       this.ws.emit('register_drivers', drivers);
-      this.drivers_send = true;
+      this.driversSend = true;
     }
+    if (force) {
+      registerDrivers();
+    } else {
+      this.driversUpdateTimeout = setTimeout(() => {
+        registerDrivers();
+      }, 5000);
+    }
+  }
 
+  registerDevices(force = false) {
+    clearTimeout(this.devicesUpdateTimeout);
     const registerDevices = () => {
       const devices = [];
       Object.keys(this.devices).forEach(class_name => {
@@ -128,62 +197,15 @@ export const Cloud = toMixin(base => class Cloud extends base {
         devices.push(opts)
       })
       this.ws.emit('register_devices', devices);
-      this.devices_send = true;
+      this.devicesSend = true;
     }
-
-    console.log(`connect: ${this.url}`);
-    this.ws = io.connect(this.url, {transports: ['websocket']});
-    this.ws.on('connect', () => {
-      console.log('', 'cloud', 'receive', 'connect');
-      registerGateway();
-    });
-    this.ws.on('disconnect', (error) => {
-      console.log('', 'cloud', 'receive', 'disconnect');
-      this.cloud_ready = false;
-      this.drivers_send = false;
-      this.devices_send = false;
-    });
-    this.ws.on('gateway_registered', () => {
-      this.cloud_ready = true;
-      if (this.drivers_ready && !this.drivers_send) {
-        registerDrivers();
-      }
-      if (this.devices_ready && !this.devices_send) {
+    if (force) {
+      registerDevices();
+    } else {
+      this.devicesUpdateTimeout = setTimeout(() => {
         registerDevices();
-      }
-    });
-    this.ws.on('request', (data) => {
-      console.log(data);
-      const id = data.id;
-      switch (data.method) {
-        case 'add_device':
-          this.newDevice(1, data.body).then((body) => {
-            this.ws.emit('response', {id, body});
-          }).catch(error => {
-            this.ws.emit('response', {id, error});
-          });
-          break;
-      }
-    });
-
-    this.subscribe(EventTypes.ApplicationDriverReady, () => {
-      this.drivers_ready = true;
-      if (!this.drivers_send) {
-        registerDrivers();
-      }
-    });
-
-    this.subscribe(EventTypes.DeviceDone, () => {
-      this.devices_ready = true;
-      if (!this.devices_send) {
-        registerDevices();
-      }
-    });
-
-  }
-
-  updateCapabilityValues(ident, identifier, values) {
-    this.ws.emit('update_device_capabilities', [{ident, identifier, values}]);
+      }, 5000);
+    }
   }
 
 });

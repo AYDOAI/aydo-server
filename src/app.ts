@@ -132,17 +132,19 @@ export class App extends Base.with(Config, Database, Emitter, Log, RestApi, Driv
               const params = Object.assign({icon}, input.params);
               const driver_id = this.drivers[input.model].db_driver.id;
               this.createSubDevice(input.class_name, input.ident, input.name, driver_id, params, input.zone_id, input.parent, input.user_id).then((device: any) => {
-                let params;
-                try {
-                  params = JSON.parse(device.params);
-                } catch (e) {
-                  this.app.error(e)
-                }
+                // let params;
+                // try {
+                //   params = JSON.parse(device.params);
+                // } catch (e) {
+                //   this.error(e)
+                // }
                 // this.app.ws.sendToAll('notify', {
                 //   system: true,
                 //   type: 'device-create',
                 //   device: {id: device.id, name: device.name, icon: params ? params.icon : null, zone_id: device.zone_id}
                 // });
+                this.loadDevices();
+                this.registerDevices();
                 callback(null, device);
               }).catch(error => {
                 callback(error, null);
@@ -290,6 +292,8 @@ export class App extends Base.with(Config, Database, Emitter, Log, RestApi, Driv
                 driver_id: body.driver_id,
               }).then(() => {
                 this.devicesCache = null;
+                this.registerDevices();
+                this.loadDevices();
                 // this.restart();
                 resolve(data);
               });
