@@ -28,6 +28,8 @@ export const Cloud = toMixin(base => class Cloud extends base {
   devicesSend = false;
   driversUpdateTimeout = null;
   devicesUpdateTimeout = null;
+  deviceCapabilities = [];
+  deviceCapabilitiesLastUpdate = null;
 
   get url() {
     return this.config.cloud && this.config.cloud.url ? this.config.cloud.url : 'https://app.aydo.ai';
@@ -109,14 +111,22 @@ export const Cloud = toMixin(base => class Cloud extends base {
     this.subscribe(EventTypes.DeviceDone, () => {
       this.devicesReady = true;
       if (!this.devicesSend) {
-        this.registerDevices();
+        this.registerDevices(true);
       }
     });
 
   }
 
   updateCapabilityValues(ident, identifier, values) {
-    this.ws.emit('update_device_capabilities', [{ident, identifier, values}]);
+    this.deviceCapabilities.push({ident, identifier, values});
+    if (!this.deviceCapabilitiesLastUpdate) {
+      this.deviceCapabilitiesLastUpdate = new Date().getTime();
+    }
+    if (new Date().getTime() - this.deviceCapabilitiesLastUpdate > 10000) {
+      this.ws.emit('update_device_capabilities', this.deviceCapabilities);
+      this.deviceCapabilities = [];
+      this.deviceCapabilitiesLastUpdate = new Date().getTime();
+    }
   }
 
   registerDrivers(force = false) {
@@ -177,7 +187,7 @@ export const Cloud = toMixin(base => class Cloud extends base {
             unit: cap.unit,
             options: cap.options ? JSON.parse(cap.options) : null,
             params: cap.params ? JSON.parse(cap.params) : null,
-            value: cap.value,
+            // value: cap.value,
             hidden: cap.hidden,
             disabled: cap.disabled,
           })
