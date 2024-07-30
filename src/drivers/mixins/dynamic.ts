@@ -238,58 +238,58 @@ export const Dynamic = toMixin(parent => class Dynamic extends parent {
         status: device ? this.current_status : {},
         // params: device ? device.db_device.getParams() : {}
       }).then((result) => {
-        if (result && result.update_settings) {
-          Object.keys(result.settings).forEach(key => {
-            this.setParam(key, result.settings[key]);
-          });
-          this.saveDeviceParams();
-        } else if (result && result.update_status) {
-          this.emit('update_updated_at_now');
-          Object.keys(result.status).forEach(key => {
-            let value = result.status[key];
-            if (this.invert_power && key.indexOf('power') === 0) {
-              value = !value;
-            }
-            device.emit(`update_${key}`, value);
-          });
-          if (result.force_status) {
-            Object.keys(result.force_status).forEach(key => {
-              this.current_status[key] = result.force_status[key];
-            });
-          }
-          device.queueUpdateEx();
-        } else if (device) {
-          if (command.indexOf('range') === 0 && this.invert_range) {
-            value = (this.rangeMax - (value - this.rangeMin));
-          }
-          device.emit(`update_${command}`, value);
-          device.queueUpdateEx();
-        }
+        // if (result && result.update_settings) {
+        //   Object.keys(result.settings).forEach(key => {
+        //     this.setParam(key, result.settings[key]);
+        //   });
+        //   this.saveDeviceParams();
+        // } else if (result && result.update_status) {
+        //   this.emit('update_updated_at_now');
+        //   Object.keys(result.status).forEach(key => {
+        //     let value = result.status[key];
+        //     if (this.invert_power && key.indexOf('power') === 0) {
+        //       value = !value;
+        //     }
+        //     device.emit(`update_${key}`, value);
+        //   });
+        //   if (result.force_status) {
+        //     Object.keys(result.force_status).forEach(key => {
+        //       this.current_status[key] = result.force_status[key];
+        //     });
+        //   }
+        //   device.queueUpdateEx();
+        // } else if (device) {
+        //   if (command.indexOf('range') === 0 && this.invert_range) {
+        //     value = (this.rangeMax - (value - this.rangeMin));
+        //   }
+        //   device.emit(`update_${command}`, value);
+        //   device.queueUpdateEx();
+        // }
         resolve(result);
       }).catch(error => {
-        if (error && error.message && command == 'status' && !error.ignore) {
-          this.app.ws.sendToAll('exception', {message: error.message})
-        }
+        // if (error && error.message && command == 'status' && !error.ignore) {
+        //   this.app.ws.sendToAll('exception', {message: error.message})
+        // }
         reject(error);
       });
     }
 
-    if (this.isCommandBeforeInit(command)) {
-      const check = () => {
-        const ipc = this.app.ipcClients.find(item => item.id === ident);
-        if (ipc) {
-          request();
-        } else {
-          console.log(`commandEx, wait 100 ms`);
-          setTimeout(() => {
-            check();
-          }, 100)
-        }
-      }
-      check();
-    } else {
+    // if (this.isCommandBeforeInit(command)) {
+    //   const check = () => {
+    //     const ipc = this.app.ipcClients.find(item => item.id === ident);
+    //     if (ipc) {
+    //       request();
+    //     } else {
+    //       console.log(`commandEx, wait 100 ms`);
+    //       setTimeout(() => {
+    //         check();
+    //       }, 100)
+    //     }
+    //   }
+    //   check();
+    // } else {
       request();
-    }
+    // }
   }
 
 });

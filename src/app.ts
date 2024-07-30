@@ -196,6 +196,16 @@ export class App extends Base.with(Config, Database, Emitter, Log, RestApi, Driv
     return result;
   }
 
+  findDeviceByIdent(ident) {
+    let result = null;
+    Object.keys(this.devices).forEach(key => {
+      if (this.devices[key].ident === ident) {
+        result = this.devices[key];
+      }
+    });
+    return result;
+  }
+
   applicationPath(root, needRoot = false) {
     let length = 0;
     switch (__dirname.split(path.sep).pop()) {
@@ -273,6 +283,21 @@ export class App extends Base.with(Config, Database, Emitter, Log, RestApi, Driv
     return new Promise((resolve) => {
       resolve(require(ident))
     });
+  }
+
+  deviceCommand(body: any) {
+    return new Promise((resolve, reject) => {
+      const device = this.findDeviceByIdent(body.ident);
+      if (device) {
+        device.deviceCommand(body).then(data => {
+          resolve(data);
+        }).catch(error => {
+          reject(error);
+        });
+      } else {
+        reject({message: 'Device not found.'});
+      }
+    })
   }
 
   newDevice(user_id: number, body: any) {

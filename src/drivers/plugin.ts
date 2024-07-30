@@ -258,4 +258,56 @@ export class Plugin extends BaseDriver.with(Connect2, Dynamic) {
   //   return this.getParam('icon', this.icon);
   // }
 
+  deviceCommand(data) {
+    if (!data.data) {
+      data.data = {};
+    }
+    if (this.pluginSubDevice) {
+      data.data['id'] = this.getParam('parent_id');
+    }
+    return new Promise((resolve, reject) => {
+      switch (data.command) {
+        // case 'get-sub-devices':
+        // case 'save-sub-devices-zones':
+        //   super.deviceCommand(data).then((response) => {
+        //     resolve(response)
+        //   }).catch(error => {
+        //     reject(error);
+        //   });
+        //   break;
+        // case 'mqtt_message':
+        //   this.commandEx(data.command, data.value, resolve, reject, data.data)
+        //   break;
+        // case 'status':
+        //   this.commandEx(data.command, data.value, resolve, reject, data.data)
+        //   break;
+        case 'pair_mode':
+        case 'settings':
+        case 'settings_new':
+        case 'update_settings':
+          this.commandEx(data.command, data.value, resolve, reject, data.data)
+          break;
+        // case 'get_device_custom_data':
+        // case 'save_device_custom_data':
+        // case 'update_device_custom_data':
+        //   this.commandEx(data.command, data.value, resolve, reject, data.data)
+        //   break;
+        default:
+          const commands = this.plugin_sub_device ?
+            (this.plugin_sub_device_template ? this.plugin_sub_device_template.commands : null) :
+            (this.plugin_template ? this.plugin_template.commands : null);
+          if (commands && commands.find(item => item.command === data.command)) {
+            if (data.data && data.key) {
+              data.data.key = data.key;
+            }
+            this.commandEx(data.command, data.value, (data1) => {
+              resolve(data.return_data || (data1 && data1.return_data) ? data1 : data);
+            }, reject, data.data)
+          } else {
+            super.deviceCommand(data).then(resolve).catch(reject);
+          }
+      }
+    });
+  }
+
 }
