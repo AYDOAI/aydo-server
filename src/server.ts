@@ -1,3 +1,4 @@
+import {Sequelize} from 'sequelize'
 import {RequireEx} from '../lib/require-ex';
 import {sequelize} from '../lib/sequelize';
 import {ConfigFile} from './models/config-file';
@@ -52,6 +53,14 @@ const start = () => {
     const migrate = new Umzug({
       migrations: {
         glob: 'migrations/*.js',
+        resolve: ({name, path, context}) => {
+          const migration = eval(`require('${path}')`);
+          return {
+            name,
+            up: async () => migration.up({context}),
+            down: async () => migration.down({context}),
+          }
+        }
       },
       context: db.getQueryInterface(),
       storage: new SequelizeStorage({sequelize: db}),
