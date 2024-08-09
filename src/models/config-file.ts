@@ -2,6 +2,7 @@ export interface ConfigFile {
   port: number;
   https_port?: number;
   key?: string;
+  mdnsPort: number;
   certificate?: string;
   environment: 'production';
   production?: {
