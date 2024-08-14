@@ -29,6 +29,7 @@ try {
   console.error(e);
   config = {
     port: 80,
+    mdnsPort: 89,
     environment: 'production',
     production: {
       dialect: 'sqlite',

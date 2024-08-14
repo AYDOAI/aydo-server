@@ -21,6 +21,8 @@ import {Devices} from './mixins/devices';
 import {IPC} from './mixins/ipc';
 import {Cloud} from './mixins/cloud';
 
+const mdns = require('mdns');
+
 const Base = toExtendable(class BaseClass {
 
   load(options: AppOptions) {
@@ -52,6 +54,7 @@ export class App extends Base.with(Config, Database, Emitter, Log, RestApi, Driv
   version = '3.0.0';
   requireEx: RequireEx;
   subDeviceTimeouts = {};
+  bonjour: any;
 
   load(options: AppOptions) {
     this.requireEx = options.requireEx;
@@ -168,7 +171,14 @@ export class App extends Base.with(Config, Database, Emitter, Log, RestApi, Driv
       }
     }, {maxTimeout: 30000, name: 'subdevices'});
 
+    this.mdnsStart()
     super.load(options);
+  }
+
+  mdnsStart() {
+    this.bonjour = mdns.createAdvertisement(mdns.tcp('http'), this.config.mdnsPort, {name: this.identifier});
+    console.log('mdnsStart', this.bonjour);
+    this.bonjour.start();
   }
 
   terminate() {
