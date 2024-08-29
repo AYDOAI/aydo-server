@@ -79,17 +79,109 @@ function initRoutes(app) {
     }
     if (!exists) {
       if ((req.method === 'GET' && res.method === '/')) {
-        return res.status(200).send(`
-<html>
-<body>
-<p>Please scan this QR-code in the application.</p>
-<p style="color: gray;">will be implemented later.</p>
-<p>... or enter this fields manually:</p>
-<p>Hub identifier: ${app.identifier}</p>
-<p>Hub token: ${app.token}</p>
-</body>
-</html>
-`);
+        const qrcode = require('qrcode');
+        qrcode.toDataUrl(JSON.stringify({
+          login: '',
+          key: '',
+          server_id: '',
+          server_address: ''
+        }), { type: 'png' }, (err, url) => {
+            if (err) {
+              return res.status(200).send('An error occurred while generating QR code');
+            } else {
+              const html = `<style>
+                  body {
+                      background-color: #FBFEF4;
+                  }
+                  body * {
+                      color: #060022;
+                      font-family: "IBM Plex Mono", monospace;
+                  }
+                  .content {
+                      width: 100vw;
+                      height: 100vh;
+              
+                      display: flex;
+                      flex-direction: column;
+                      align-items: center;
+                      gap: 50px;
+                  }
+                  .title {
+                      margin: 0;
+                      text-align: center;
+                      font-size: 22px;
+                  }
+                  span {
+                      font-size: 16px;
+                  }
+                  .copy-container {
+                      display: flex;
+                      flex-direction: column;
+                      gap: 8px;
+                  }
+                  .input {
+                      position: relative;
+                  }
+                  .copy-container input {
+                      padding: 16px 60px 16px 12px;
+                      width: 360px;
+                      font-size: 16px;
+                      border: 1px solid #060022;
+                      border-radius: 8px;
+                      background-color: transparent;
+                      user-select: none;
+                  }
+                  .copy-container button {
+                      position: absolute;
+                      top: 50%;
+                      transform: translateY(-50%);
+                      right: 0;
+                      padding: 16px 30px;
+                      height: 100%;
+                      color: white;
+                      background-color: #060022;
+                      border: none;
+                      border-radius: 0 5px 5px 0;
+                      cursor: pointer;
+                  }
+              </style>
+              <html>
+                  <head>
+                      <link rel="preconnect" href="https://fonts.googleapis.com">
+                      <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+                      <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;1,100;1,200;1,300;1,400;1,500;1,600;1,700&display=swap" rel="stylesheet">
+                  </head>
+                  <body>
+                      <div class="content">
+                          <h4 class="title">Please, scan this QR-code in the application</h4>
+                          <img src="${url}" alt=""/>
+                          <span>or enter this fields manually:</span>
+                          <div class="copy-container">
+                              <label>Hub identifier: </label>
+                              <div class="input">
+                                  <input type="text" value="${app.identifier}">
+                                  <button onclick="copyText(app.identifier)">copy</button>
+                              </div>
+                          </div>
+                          <div class="copy-container">
+                              <label>Hub token:</label>
+                              <div class="input">
+                              <input type="text" value="${app.token}">
+                                  <button onclick="copyText(app.token)">copy</button>
+                              </div>
+                          </div>
+                      </div>
+                      <script>
+                          function copyText(text) {
+                              navigator.clipboard.writeText(text);
+                          }
+                          </script>
+                  </body>
+              </html>`;
+              return res.status(200).send(html);
+            }
+        });
+
       } else {
         return res.error({message: 'Unauthenticated'}, 401)
       }
