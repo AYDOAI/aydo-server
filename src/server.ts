@@ -59,11 +59,11 @@ const start = () => {
       migrations: {
         glob: 'migrations/*.js',
         resolve: ({name, path, context}) => {
-          const migration = require(path);
+          const migration = () => import(path);
           return {
             name,
-            up: async () => migration.up({context}),
-            down: async () => migration.down({context}),
+            up: async () => (await migration()).up({context}),
+            down: async () => (await migration()).down({context}),
           }
         }
       },
