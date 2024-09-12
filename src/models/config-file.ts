@@ -10,6 +10,9 @@ export interface ConfigFile {
     database: string;
     storage: string;
   };
+  cloud?: {
+    url?: string;
+  };
   identifier: string;
   token: string;
   log: {

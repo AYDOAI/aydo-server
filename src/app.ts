@@ -171,12 +171,12 @@ export class App extends Base.with(Config, Database, Emitter, Log, RestApi, Driv
       }
     }, {maxTimeout: 30000, name: 'subdevices'});
 
-    this.mdnsStart()
     super.load(options);
+    this.mdnsStart()
   }
 
   mdnsStart() {
-    this.bonjour = mdns.createAdvertisement(mdns.tcp('http'), this.config.mdnsPort, {name: this.identifier});
+    this.bonjour = mdns.createAdvertisement(mdns.tcp('http'), this.config.port, {name: this.identifier});
     console.log('mdnsStart', this.bonjour);
     this.bonjour.start();
   }
@@ -361,7 +361,7 @@ export class App extends Base.with(Config, Database, Emitter, Log, RestApi, Driv
         this.getItem(DbTables.DeviceSettings, where, true).then(data => {
           const promises = [];
           if (!data) {
-            driver.driver_settings.forEach(setting => {
+            driver.driver_settings?.forEach(setting => {
               const body = Object.assign({device_id}, setting);
               body.value = settings[setting.key];
               if (!body.description) {

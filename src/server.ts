@@ -6,7 +6,8 @@ import {ConfigFile} from './models/config-file';
 const fs = require('fs');
 const {Umzug, SequelizeStorage} = require('umzug');
 
-const configDir = `${process.cwd()}/config`;
+const path = require('path');
+const configDir = path.join(process.cwd(), 'config').replace(/\\/g, '/');
 try {
   if (!fs.existsSync(configDir)) {
     fs.mkdirSync(configDir);
@@ -36,6 +37,9 @@ try {
       database: 'main',
       storage: './database.sqlite',
     },
+    cloud: {
+      url: ''
+    },
     identifier: '',
     token: '',
     log: {
@@ -55,7 +59,7 @@ const start = () => {
       migrations: {
         glob: 'migrations/*.js',
         resolve: ({name, path, context}) => {
-          const migration = eval(`require('${path}')`);
+          const migration = require(path);
           return {
             name,
             up: async () => migration.up({context}),
