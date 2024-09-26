@@ -32,7 +32,7 @@ export const Cloud = toMixin(base => class Cloud extends base {
   deviceCapabilitiesLastUpdate = null;
 
   get url() {
-    return this.config.cloud && this.config.cloud.url ? this.config.cloud.url : 'https://app.aydo.ai';
+    return this.config.cloud && this.config.cloud.url ? this.config.cloud.url : 'https://cloud.aydo.ai';
   }
 
   get active() {
