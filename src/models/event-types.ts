@@ -67,6 +67,7 @@ export enum EventTypes {
   SendNotification = 'send-notification',
 
   DeviceCreate = 'device->create',
+  DeviceInstall = 'device->install',
   DeviceUpdate = 'device->update',
   DeviceDone = 'device->done',
   DeviceConnect = 'device->connect',
