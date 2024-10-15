@@ -20,6 +20,10 @@ export const Connect2 = toMixin(parent => class Connect2 extends parent {
     return 'initDevice';
   }
 
+  get installDeviceMethod() {
+    return 'installDevice';
+  }
+
   get connectMethod() {
     return 'connectEx';
   }
@@ -50,6 +54,20 @@ export const Connect2 = toMixin(parent => class Connect2 extends parent {
   }
 
   initDeviceEx(resolve, reject) {
+    resolve({});
+  }
+
+  installDevice() {
+    return new Promise((resolve, reject) => {
+      this.installDeviceEx(() => {
+        resolve({});
+      }, (error) => {
+        reject(error);
+      });
+    });
+  }
+
+  installDeviceEx(resolve, reject) {
     resolve({});
   }
 
