@@ -104,8 +104,10 @@ export const Devices = toMixin(base => class Devices extends base {
             if (!device.disabled) {
               this.createDevice(device.driver.class_name, device).then((driver: any) => {
                 this.devices[device.ident] = driver;
-                this.addConnectQueue(driver.initMethod ? driver.initMethod : 'init', driver, true);
-                ready();
+                this.devices[device.ident].installDevice().then(() => {
+                  this.addConnectQueue(driver.initMethod ? driver.initMethod : 'init', driver, true);
+                  ready();
+                });
               }).catch((error) => {
                 this.error(error);
                 ready();

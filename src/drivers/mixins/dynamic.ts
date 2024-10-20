@@ -177,6 +177,35 @@ export const Dynamic = toMixin(parent => class Dynamic extends parent {
     }
   }
 
+  installDeviceEx(resolve, reject) {
+    if (this.plugin_sub_device) {
+      this.device = {};
+      resolve({});
+    } else {
+      const timeout = !this.first_init ? 2000 : 0;
+      this.first_init = true;
+      setTimeout(() => {
+        this.app.request(`driver-${this.id}`, 'install-device', {
+          server_id: this.app.config.identifier,
+          environment: this.app.config.environment,
+          internal_port: this.app.config.port,
+          internal_ip: this.app.internal_ip,
+          cloud: this.app.config.cloud ? !!this.app.config.cloud.cloud : false,
+          ident: this.ident,
+          params: this.getParams(),
+          log_path: this.app.config.log.path,
+          path: this.app.applicationPath(__dirname, true),
+          pid: process.pid,
+        }).then(() => {
+          resolve({});
+        }).catch(error => {
+          reject(error);
+        });
+      }, timeout);
+    }
+  }
+
+
   connectEx(resolve, reject) {
     if (this.plugin_sub_device) {
       const check = () => {

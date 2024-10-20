@@ -1,25 +1,23 @@
 import * as path from 'path';
 
-import {toExtendable, Extendable, Mixin} from '../lib/foibles';
-import {RequireEx} from '../lib/require-ex';
-import {getDeviceIdent} from '../lib/shared';
 import * as BetterQueue from '../lib/better-queue/queue';
 
+import {Extendable, Mixin, toExtendable} from '../lib/foibles';
+import {RequireEx} from '../lib/require-ex';
+import {getDeviceIdent} from '../lib/shared';
 import {Controllers} from './controllers';
-
 import {ConfigFile} from './models/config-file';
-import {EventTypes} from './models/event-types';
 import {DbTables} from './models/db-tables';
-
-import {Config} from './mixins/config';
-import {Log} from './mixins/log';
-import {Database} from './mixins/database';
-import {RestApi} from './mixins/rest-api';
-import {Emitter} from './mixins/emitter';
-import {Drivers} from './mixins/drivers';
-import {Devices} from './mixins/devices';
-import {IPC} from './mixins/ipc';
+import {EventTypes} from './models/event-types';
 import {Cloud} from './mixins/cloud';
+import {Config} from './mixins/config';
+import {Database} from './mixins/database';
+import {Devices} from './mixins/devices';
+import {Drivers} from './mixins/drivers';
+import {Emitter} from './mixins/emitter';
+import {IPC} from './mixins/ipc';
+import {Log} from './mixins/log';
+import {RestApi} from './mixins/rest-api';
 
 const mdns = require('mdns');
 
