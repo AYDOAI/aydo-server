@@ -32,7 +32,7 @@ export const Cloud = toMixin(base => class Cloud extends base {
   deviceCapabilitiesLastUpdate = null;
 
   get url() {
-    return this.config.cloud && this.config.cloud.url ? this.config.cloud.url : 'https://cloud.aydo.ai';
+    return this.config.cloud && this.config.cloud.url ? this.config.cloud.url : 'https://app.aydo.ai';
   }
 
   get active() {
@@ -72,12 +72,18 @@ export const Cloud = toMixin(base => class Cloud extends base {
       console.log('', 'cloud', 'receive', 'connect');
       registerGateway();
     });
+
+    this.ws.on('connect_error', (error: Error) => {
+      console.log(`connect error: ${error.message}`);
+    });
+
     this.ws.on('disconnect', (error) => {
       console.log('', 'cloud', 'receive', 'disconnect');
       this.cloudReady = false;
       this.driversSend = false;
       this.devicesSend = false;
     });
+
     this.ws.on('gateway_registered', () => {
       this.cloudReady = true;
       if (this.driversReady && !this.driversSend) {
@@ -87,6 +93,7 @@ export const Cloud = toMixin(base => class Cloud extends base {
         this.registerDevices(true);
       }
     });
+
     this.ws.on('request', (data) => {
       console.log(data);
       const id = data.id;
