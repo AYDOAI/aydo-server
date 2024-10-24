@@ -80,7 +80,7 @@ function initRoutes(app) {
     if (!exists) {
       if ((req.method === 'GET' && res.method === '/')) {
         const qrcode = require('qrcode');
-        qrcode.toDataUrl(JSON.stringify({
+        qrcode.toDataURL(JSON.stringify({
           login: '',
           key: '',
           server_id: '',
