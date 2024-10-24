@@ -79,17 +79,48 @@ function initRoutes(app) {
     }
     if (!exists) {
       if ((req.method === 'GET' && res.method === '/')) {
-        const qrcode = require('qrcode');
-        qrcode.toDataURL(JSON.stringify({
-          login: '',
-          key: '',
-          server_id: '',
-          server_address: ''
-        }), { type: 'png' }, (err, url) => {
-            if (err) {
-              return res.status(200).send('An error occurred while generating QR code');
-            } else {
-              const html = `<style>
+      } else {
+        return res.error({message: 'Unauthenticated'}, 401)
+      }
+    }
+
+    next();
+  });
+
+  let keys = Object.keys(app.controllers);
+  keys.forEach(key => {
+    app.controllers[key].routes(router);
+  });
+
+  keys = Object.keys(app.devices);
+  keys.forEach(key => {
+    app.devices[key].routes(router);
+  });
+
+  router.get('/', (function (req, res) {
+    const qrcode = require('qrcode');
+    const data = JSON.stringify({
+      login: '',
+      key: '',
+      server_id: '',
+      server_address: ''
+    });
+
+    const generateQRCode = (data) => {
+      return new Promise((resolve, reject) => {
+        qrcode.toDataURL(data, { type: 'png' }, (err, url) => {
+          if (err) {
+            reject(err);
+          } else {
+            resolve(url);
+          }
+        });
+      });
+    };
+
+    generateQRCode(data)
+        .then((url) => {
+          const html = `<style>
                   body {
                       background-color: #FBFEF4;
                   }
@@ -123,7 +154,7 @@ function initRoutes(app) {
                       position: relative;
                   }
                   .copy-container input {
-                      padding: 16px 60px 16px 12px;
+                      padding: 16px 100px 16px 12px;
                       width: 360px;
                       font-size: 16px;
                       border: 1px solid #060022;
@@ -159,46 +190,32 @@ function initRoutes(app) {
                           <div class="copy-container">
                               <label>Hub identifier: </label>
                               <div class="input">
-                                  <input type="text" value="${app.identifier}">
-                                  <button onclick="copyText(app.identifier)">copy</button>
+                                  <input type="text" id="identifier" value="${app.identifier}">
+                                  <button onclick="copyText('identifier')">copy</button>
                               </div>
                           </div>
                           <div class="copy-container">
                               <label>Hub token:</label>
                               <div class="input">
-                              <input type="text" value="${app.token}">
-                                  <button onclick="copyText(app.token)">copy</button>
+                              <input type="text" id="token" value="${app.token}">
+                                  <button onclick="copyText('token')">copy</button>
                               </div>
                           </div>
                       </div>
                       <script>
-                          function copyText(text) {
+                          function copyText(el) {
+                              const text = document.getElementById(el)?.value;
                               navigator.clipboard.writeText(text);
                           }
                           </script>
                   </body>
               </html>`;
-              return res.status(200).send(html);
-            }
+          return res.status(200).send(html);
+        })
+        .catch((err) => {
+          return res.status(200).send('An error occurred while generating QR code');
         });
-
-      } else {
-        return res.error({message: 'Unauthenticated'}, 401)
-      }
-    }
-
-    next();
-  });
-
-  let keys = Object.keys(app.controllers);
-  keys.forEach(key => {
-    app.controllers[key].routes(router);
-  });
-
-  keys = Object.keys(app.devices);
-  keys.forEach(key => {
-    app.devices[key].routes(router);
-  });
+  }))
 
   router.get('/api/v3/version', function (req, res) {
     res.success({version: app.version, identifier: app.identifier});
