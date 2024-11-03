@@ -27,7 +27,7 @@ if [ "$PLATFORM" == "armv6l" ]; then
 PLATFORM2="armv6"
 fi
 echo "$OS-$PLATFORM ($PLATFORM2) detected"
-NODE=v16.15.0
+NODE=v18.20.0
 echo "Downloading node https://nodejs.org/dist/${NODE}/node-${NODE}-${OS}-${PLATFORM}.tar.xz"
 if [ "$OS" == "darwin" ]; then
 curl --silent --fail https://nodejs.org/dist/${NODE}/node-${NODE}-${OS}-${PLATFORM}.tar.xz --output "node-$NODE.tar.xz"
