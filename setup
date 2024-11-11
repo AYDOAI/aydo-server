@@ -56,8 +56,8 @@ echo "Installing dependencies"
 DEBIAN_FRONTEND="noninteractive" apt-get -qq -y install tzdata
 apt-get install -qq -y build-essential libavahi-compat-libdnssd-dev
 DEBIAN_FRONTEND="noninteractive" apt-get -qq -y install samba samba-client smbclient
-apt-get install -qq -y zip iw libtool libudev-dev libnss-mdns dnsmasq hostapd autoconf automake g++ avahi-daemon avahi-discover mosquitto sqlite3 ntp git
-apt-get install -qq -y python
+apt-get install -qq -y zip iw libtool libudev-dev libnss-mdns dnsmasq hostapd autoconf automake g++ avahi-daemon avahi-discover mosquitto sqlite3 ntp
+apt-get install -qq -y git
 apt-get install -qq -y python3
 apt-get install -qq -y ffmpeg
 fi
