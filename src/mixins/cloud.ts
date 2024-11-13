@@ -85,6 +85,7 @@ export const Cloud = toMixin(base => class Cloud extends base {
     });
 
     this.ws.on('gateway_registered', () => {
+      console.log('', 'cloud', 'receive', 'gateway', 'registered');
       this.cloudReady = true;
       if (this.driversReady && !this.driversSend) {
         this.registerDrivers(true);
@@ -95,6 +96,7 @@ export const Cloud = toMixin(base => class Cloud extends base {
     });
 
     this.ws.on('request', (data) => {
+      console.log('', 'cloud', 'receive', 'request');
       console.log(data);
       const id = data.id;
       switch (data.method) {
