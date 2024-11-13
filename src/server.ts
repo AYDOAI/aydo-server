@@ -4,13 +4,15 @@ import {sequelize} from '../lib/sequelize';
 import {ConfigFile} from './models/config-file';
 
 const fs = require('fs');
+const os = require('os');
 const {Umzug, SequelizeStorage} = require('umzug');
 
 const path = require('path');
-const configDir = path.join(process.cwd(), 'config').replace(/\\/g, '/');
+const configDir = path.join(os.homedir(), '.aydo', 'server').replace(/\\/g, '/');
+
 try {
   if (!fs.existsSync(configDir)) {
-    fs.mkdirSync(configDir);
+    fs.mkdirSync(configDir, {recursive: true});
   }
 } catch (e) {
   console.error(e)
