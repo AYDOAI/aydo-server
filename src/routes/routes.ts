@@ -100,10 +100,8 @@ function initRoutes(app) {
   router.get('/', (function (req, res) {
     const qrcode = require('qrcode');
     const data = JSON.stringify({
-      login: '',
-      key: '',
-      server_id: '',
-      server_address: ''
+      token: app.token,
+      identifier: app.identifier,
     });
 
     const generateQRCode = (data) => {
