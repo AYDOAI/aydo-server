@@ -35,7 +35,7 @@
     "socket.io-client": "^4.7.5",
     "sqlite3": "^5.1.7",
     "umzug": "^3.6.1",
-    "zigbee-herdsman-converters": "^15.86.1",
-    "zigbee2mqtt-frontend": "^0.6.135"
+    "zigbee-herdsman-converters": "20.38.0",
+    "zigbee2mqtt-frontend": "0.7.4"
   }
 }
