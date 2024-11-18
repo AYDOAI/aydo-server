@@ -100,7 +100,7 @@ mkdir -p /srv/plugins
 
 echo "Cloning zigbee2mqtt plugin"
 mkdir -p /srv/code/zigbee2mqtt
-git clone --depth 1 https://github.com/AYDOAI/aydo-plugin-zigbee2mqtt.git /srv/code/zigbee2mqtt
+git clone --depth 1 --branch AYDO-main https://github.com/AYDOAI/aydo-plugin-zigbee2mqtt.git /srv/code/zigbee2mqtt
 
 cd /srv/code/zigbee2mqtt
 echo "Installing zigbee2mqtt plugin dependencies"
@@ -118,7 +118,7 @@ else
 fi
 
 echo "Cloning AYDO core"
-git clone --depth 1 https://github.com/AYDOAI/aydo-server.git /srv/code/server
+git clone --depth 1 --branch AYDO-main https://github.com/AYDOAI/aydo-server.git /srv/code/server
 cd /srv/code/server
 
 echo "Installing AYDO core dependencies"
