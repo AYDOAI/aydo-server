@@ -66,7 +66,7 @@ mkdir -p /srv/
 
 echo "Cloning zigbee2mqtt"
 mkdir -p /srv/zigbee2mqtt
-git clone --depth 1 https://github.com/Koenkk/zigbee2mqtt.git /srv/zigbee2mqtt
+git clone --depth 1 --branch 1.41.0 https://github.com/Koenkk/zigbee2mqtt.git /srv/zigbee2mqtt
 cd /srv/zigbee2mqtt
 echo "Installing zigbee2mqtt dependencies"
 npm ci
