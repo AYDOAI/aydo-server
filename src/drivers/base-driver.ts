@@ -329,6 +329,8 @@ export const BaseDriver = toExtendable(class BaseDriver extends Base.with(Queue,
     options['device_id'] = this.db_device.id;
     this.app.getItems(DbTables.DeviceCapabilities, options).then((capabilities) => {
       this.db_device.device_capabilities = capabilities;
+    }).catch(error => {
+      this.error(error);
     });
   }
 });
