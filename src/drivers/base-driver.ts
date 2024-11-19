@@ -316,7 +316,7 @@ export const BaseDriver = toExtendable(class BaseDriver extends Base.with(Queue,
         capability.options = JSON.stringify(capability.options ? capability.options : {});
         capability.params = JSON.stringify(capability.params ? capability.params : {});
         this.app.createItem(DbTables.DeviceCapabilities, capability).then((row) => {
-          // this.db_device.device_capabilities.push(row);
+          this.reloadCapabilities();
         }).catch(error => {
           this.error(error);
         });
@@ -324,4 +324,16 @@ export const BaseDriver = toExtendable(class BaseDriver extends Base.with(Queue,
     })
   }
 
+  reloadCapabilities() {
+    this.db_device.device_capabilities = [];
+
+    let options = {};
+    options['device_id'] = this.db_device.id;
+
+    this.app.getItems(DbTables.DeviceCapabilities, options).then((capabilities) => {
+      capabilities.forEach(capability => {
+        this.db_device.device_capabilities.push(capability);
+      });
+    });
+  }
 });
