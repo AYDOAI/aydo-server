@@ -325,15 +325,10 @@ export const BaseDriver = toExtendable(class BaseDriver extends Base.with(Queue,
   }
 
   reloadCapabilities() {
-    this.db_device.device_capabilities = [];
-
     let options = {};
     options['device_id'] = this.db_device.id;
-
     this.app.getItems(DbTables.DeviceCapabilities, options).then((capabilities) => {
-      capabilities.forEach(capability => {
-        this.db_device.device_capabilities.push(capability);
-      });
+      this.db_device.device_capabilities = capabilities;
     });
   }
 });
