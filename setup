@@ -89,7 +89,7 @@ User=root
 WantedBy=multi-user.target
 " > /etc/systemd/system/zigbee2mqtt.service
 systemctl daemon-reload
-systemctl start zigbee2mqtt
+# systemctl start zigbee2mqtt
 systemctl enable zigbee2mqtt.service
 fi
 
@@ -103,6 +103,11 @@ mkdir -p /srv/code/zigbee2mqtt
 git clone --depth 1 --branch AYDO-main https://github.com/AYDOAI/aydo-plugin-zigbee2mqtt.git /srv/code/zigbee2mqtt
 
 cd /srv/code/zigbee2mqtt
+
+echo "Copy zigbee2mqtt configuration file"
+cp ./zigbee2mqtt.configuration.yaml /srv/zigbee2mqtt/data/configuration.example.yaml
+cp ./zigbee2mqtt.configuration.yaml /srv/zigbee2mqtt/data/configuration.yaml
+
 echo "Installing zigbee2mqtt plugin dependencies"
 npm install || exit 1
 echo "Compiling zigbee2mqtt plugin"
