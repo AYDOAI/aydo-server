@@ -88,10 +88,10 @@ export const Cloud = toMixin(base => class Cloud extends base {
       console.log('', 'cloud', 'receive', 'gateway', 'registered');
       this.cloudReady = true;
       if (this.driversReady && !this.driversSend) {
-        this.registerDrivers(true);
+        this.registerDrivers();
       }
       if (this.devicesReady && !this.devicesSend) {
-        this.registerDevices(true);
+        this.registerDevices();
       }
     });
 
