@@ -181,7 +181,6 @@ export const Cloud = toMixin(base => class Cloud extends base {
       Object.keys(this.devices).forEach(class_name => {
         const device = this.devices[class_name];
         const opts = {
-          id: device.id,
           name: device.device_name,
           ident: device.ident,
           identifier: device.identifier,
