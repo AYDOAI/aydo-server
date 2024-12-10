@@ -217,6 +217,7 @@ export const Cloud = toMixin(base => class Cloud extends base {
             defaultValue: set.default_value,
             params: set.params,
             value: set.value,
+            unique: set.unique || false
           })
         });
         devices.push(opts)
