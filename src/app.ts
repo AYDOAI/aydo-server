@@ -311,6 +311,10 @@ export class App extends Base.with(Config, Database, Emitter, Log, RestApi, Driv
   newDevice(user_id: number, body: any) {
     return new Promise((resolve, reject) => {
       const driver = this.findDriverByClassName(body.class_name);
+      const isValid = this.isNewDeviceValid(body);
+      if (!isValid) {
+        reject({message: 'Device with such settings is already linked to your account'});
+      }
       try {
         if (driver && driver.validateParams(body.params)) {
           body.driver_id = driver.db_driver.id;
@@ -343,6 +347,28 @@ export class App extends Base.with(Config, Database, Emitter, Log, RestApi, Driv
         reject(e);
       }
     })
+  }
+
+  isNewDeviceValid(data: any): boolean {
+    if (data.driverId && data.settings) {
+      const devices = this.buildDevicesRO();
+      const devicesByDriverId = devices.filter(device => device.driverId === data.driverId);
+      if (devicesByDriverId && devicesByDriverId.length) {
+        for (const device of devicesByDriverId) {
+          if (device.settings && device.settings.length > 0) {
+            const uniqueSettings = device.settings.filter(setting => setting.unique);
+            if (uniqueSettings.length > 0) {
+              const allMatch = uniqueSettings.every(us => us.value === data.settings[us.key]);
+              if (allMatch) {
+                return false
+              }
+            }
+          }
+        }
+      }
+    }
+
+    return true;
   }
 
   restart() {

@@ -32,7 +32,8 @@ export const Cloud = toMixin(base => class Cloud extends base {
   deviceCapabilitiesLastUpdate = null;
 
   get url() {
-    return this.config.cloud && this.config.cloud.url ? this.config.cloud.url : 'https://cloud.aydo.ai';
+    return 'http://localhost:3000'
+    // return this.config.cloud && this.config.cloud.url ? this.config.cloud.url : 'https://cloud.aydo.ai';
   }
 
   get active() {
@@ -177,51 +178,7 @@ export const Cloud = toMixin(base => class Cloud extends base {
   registerDevices(force = false) {
     clearTimeout(this.devicesUpdateTimeout);
     const registerDevices = () => {
-      const devices = [];
-      Object.keys(this.devices).forEach(class_name => {
-        const device = this.devices[class_name];
-        const opts = {
-          id: device.id,
-          name: device.device_name,
-          ident: device.ident,
-          identifier: device.identifier,
-          driverId: device.db_device.driver_id,
-          zoneId: device.db_device.zone_id,
-          userId: device.db_device.user_id,
-          parentId: device.db_device.parent_id,
-          disabled: device.db_device.disabled,
-          capabilities: [],
-          settings: []
-        };
-        device.db_device.device_capabilities.forEach(cap => {
-          opts.capabilities.push({
-            deviceId: cap.device_id,
-            ident: cap.ident,
-            index: cap.index,
-            name: cap.name,
-            displayName: cap.display_name,
-            unit: cap.unit,
-            options: cap.options ? JSON.parse(cap.options) : null,
-            params: cap.params ? JSON.parse(cap.params) : null,
-            // value: cap.value,
-            hidden: cap.hidden,
-            disabled: cap.disabled,
-          })
-        });
-        device.db_device.device_settings.forEach(set => {
-          opts.settings.push({
-            deviceId: set.device_id,
-            key: set.key,
-            name: set.name,
-            description: set.description,
-            type: set.type,
-            defaultValue: set.default_value,
-            params: set.params,
-            value: set.value,
-          })
-        });
-        devices.push(opts)
-      })
+      const devices = this.buildDevicesRO();
       this.ws.emit('register_devices', devices);
       this.devicesSend = true;
     }
@@ -232,6 +189,56 @@ export const Cloud = toMixin(base => class Cloud extends base {
         registerDevices();
       }, 5000);
     }
+  }
+
+  buildDevicesRO() {
+    const devices = [];
+    Object.keys(this.devices).forEach(class_name => {
+      const device = this.devices[class_name];
+      const opts = {
+        name: device.device_name,
+        ident: device.ident,
+        identifier: device.identifier,
+        driverId: device.db_device.driver_id,
+        zoneId: device.db_device.zone_id,
+        userId: device.db_device.user_id,
+        parentId: device.db_device.parent_id,
+        disabled: device.db_device.disabled,
+        capabilities: [],
+        settings: []
+      };
+      device.db_device.device_capabilities.forEach(cap => {
+        opts.capabilities.push({
+          deviceId: cap.device_id,
+          ident: cap.ident,
+          index: cap.index,
+          name: cap.name,
+          displayName: cap.display_name,
+          unit: cap.unit,
+          options: cap.options ? JSON.parse(cap.options) : null,
+          params: cap.params ? JSON.parse(cap.params) : null,
+          // value: cap.value,
+          hidden: cap.hidden,
+          disabled: cap.disabled,
+        })
+      });
+      device.db_device.device_settings.forEach(set => {
+        opts.settings.push({
+          deviceId: set.device_id,
+          key: set.key,
+          name: set.name,
+          description: set.description,
+          type: set.type,
+          defaultValue: set.default_value,
+          params: set.params,
+          value: set.value,
+          unique: set.unique || false
+        })
+      });
+      devices.push(opts)
+    })
+
+    return devices;
   }
 
 });
