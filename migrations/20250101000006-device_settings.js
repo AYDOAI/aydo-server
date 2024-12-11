@@ -58,6 +58,11 @@ async function up({context: queryInterface}) {
     "deleted_at": {
       "type": Sequelize.DATE,
       "allowNull": true
+    },
+    "unique": {
+      "type": Sequelize.BOOLEAN,
+      "allowNull": true,
+      "defaultValue": false
     }
   });
 }

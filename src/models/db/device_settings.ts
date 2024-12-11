@@ -8,6 +8,11 @@ export class DeviceSettings extends BaseModel {
         type: app.Sequelize.DataTypes.INTEGER,
         allowNull: false,
       },
+      unique: {
+        type: app.Sequelize.DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: false
+      },
       key: {
         type: app.Sequelize.DataTypes.STRING,
         allowNull: false,
