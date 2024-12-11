@@ -102,11 +102,16 @@ export const Cloud = toMixin(base => class Cloud extends base {
       const id = data.id;
       switch (data.method) {
         case 'add_device':
-          this.newDevice(1, data.body).then((body) => {
-            this.ws.emit('response', {id, body});
-          }).catch(error => {
-            this.ws.emit('response', {id, error});
-          });
+            this.deleteDevice('test_1733939066661').then(data => {
+                this.ws.emit('response', {id, data})
+            }).catch(error => {
+                this.ws.emit('response', {id, error})
+            })
+          // this.newDevice(1, data.body).then((body) => {
+          //   this.ws.emit('response', {id, body});
+          // }).catch(error => {
+          //   this.ws.emit('response', {id, error});
+          // });
           break;
         case 'device_command':
           this.deviceCommand(data.body).then((body) => {
@@ -115,6 +120,12 @@ export const Cloud = toMixin(base => class Cloud extends base {
             this.ws.emit('response', {id, error});
           });
           break;
+        case 'delete_device':
+          this.deleteDevice('test_1733932949984').then(data => {
+            this.ws.emit('response', {id, data})
+          }).catch(error => {
+            this.ws.emit('response', {id, error})
+          })
       }
     });
 
@@ -237,7 +248,7 @@ export const Cloud = toMixin(base => class Cloud extends base {
       });
       devices.push(opts)
     })
-
+    console.log(JSON.stringify(devices))
     return devices;
   }
 

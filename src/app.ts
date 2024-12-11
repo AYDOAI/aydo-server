@@ -214,6 +214,16 @@ export class App extends Base.with(Config, Database, Emitter, Log, RestApi, Driv
     return result;
   }
 
+  getDeviceIdByIdent(ident) {
+    let result = null;
+    Object.keys(this.devices).forEach(key => {
+      if (this.devices[key].ident === ident) {
+        result = this.devices[key].id;
+      }
+    });
+    return result;
+  }
+
   applicationPath(root, needRoot = false) {
     let length = 0;
     switch (__dirname.split(path.sep).pop()) {
@@ -370,6 +380,43 @@ export class App extends Base.with(Config, Database, Emitter, Log, RestApi, Driv
 
     return true;
   }
+
+  deleteDevice(device_ident: string) {
+    return new Promise((resolve, reject) => {
+      const device_id = this.getDeviceIdByIdent(device_ident);
+      if (device_id) {
+        this.deleteDeviceSettings(device_id)
+            .then(() => {
+              return this.deleteItem(DbTables.Devices, { id: device_id });
+            })
+            .then(() => {
+              this.devicesCache = null;
+              this.registerDevices();
+              this.loadDevices();
+              resolve({ message: 'Device and its settings successfully deleted.' });
+            })
+            .catch(error => {
+              reject(error);
+            });
+      } else {
+        reject({ message: 'Device not found' })
+      }
+    });
+  }
+
+  deleteDeviceSettings(device_id: number) {
+    return new Promise((resolve, reject) => {
+      const where = { device_id };
+      this.deleteItem(DbTables.DeviceSettings, where)
+          .then((data) => {
+            resolve(data);
+          })
+          .catch(error => {
+            reject(error);
+          });
+    });
+  }
+
 
   restart() {
     clearTimeout(this.restartTimeout);
