@@ -390,9 +390,8 @@ export class App extends Base.with(Config, Database, Emitter, Log, RestApi, Driv
               return this.deleteItem(DbTables.Devices, { id: device_id });
             })
             .then(() => {
-              this.devicesCache = null;
+              this.loadDevices(true);
               this.registerDevices();
-              this.loadDevices();
               resolve({ message: 'Device and its settings successfully deleted.' });
             })
             .catch(error => {
