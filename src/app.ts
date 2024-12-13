@@ -194,6 +194,17 @@ export class App extends Base.with(Config, Database, Emitter, Log, RestApi, Driv
     return result;
   }
 
+  findDriverById(id) {
+    let result = null;
+    const drivers = this.drivers;
+    Object.keys(drivers).forEach(key => {
+      if (drivers[key].driver_id === id) {
+        result = drivers[key];
+      }
+    });
+    return result;
+  }
+
   findDeviceById(id) {
     let result = null;
     Object.keys(this.devices).forEach(key => {
@@ -314,6 +325,7 @@ export class App extends Base.with(Config, Database, Emitter, Log, RestApi, Driv
       const isValid = this.isNewDeviceValid(body);
       if (!isValid) {
         reject({message: 'Device with such settings is already linked to your account'});
+        return;
       }
       try {
         if (driver && driver.validateParams(body.params)) {
