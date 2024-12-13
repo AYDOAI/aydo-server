@@ -185,9 +185,7 @@ function initRoutes(app) {
                   </head>
                   <body>
                       <div class="content">
-                          <h4 class="title">Please, scan this QR-code in the application</h4>
-                          <img src="${url}" alt=""/>
-                          <span>or enter this fields manually:</span>
+
                           <div class="copy-container">
                               <label>Hub identifier: </label>
                               <div class="input">
