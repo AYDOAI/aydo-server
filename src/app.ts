@@ -399,9 +399,9 @@ export class App extends Base.with(Config, Database, Emitter, Log, RestApi, Driv
       if (device && device.id) {
         this.deleteItem(DbTables.Devices, { id: device.id }).then((updatedCount) => {
           if (updatedCount > 0) {
+            device.deleteDeviceEx();
             this.loadDevices(true);
             this.registerDevices();
-            device.deleteDeviceEx();
             resolve({ message: 'Device and its settings successfully deleted.' });
           } else {
             reject({ message: 'An error occurred while deleting the device' });
