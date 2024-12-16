@@ -399,18 +399,25 @@ export class App extends Base.with(Config, Database, Emitter, Log, RestApi, Driv
       if (device_id) {
         this.deleteDeviceSettings(device_id)
             .then(() => {
-              return this.deleteItem(DbTables.Devices, { id: device_id });
+              return this.deleteDeviceCapabilities(device_id);
             })
             .then(() => {
+              return this.deleteItem(DbTables.Devices, { id: device_id });
+            })
+            .then((updatedCount) => {
+              if (updatedCount > 0) {
+                resolve({ message: 'Device and its settings successfully deleted.' });
+              } else {
+                reject({ message: 'An error occurred while deleting the device' })
+              }
               this.loadDevices(true);
               this.registerDevices();
-              resolve({ message: 'Device and its settings successfully deleted.' });
             })
             .catch(error => {
               reject(error);
             });
       } else {
-        reject({ message: 'Device not found' })
+        reject({ message: 'Device not found' });
       }
     });
   }
@@ -419,6 +426,19 @@ export class App extends Base.with(Config, Database, Emitter, Log, RestApi, Driv
     return new Promise((resolve, reject) => {
       const where = { device_id };
       this.deleteItem(DbTables.DeviceSettings, where)
+          .then((data) => {
+            resolve(data);
+          })
+          .catch(error => {
+            reject(error);
+          });
+    });
+  }
+
+  deleteDeviceCapabilities(device_id: number) {
+    return new Promise((resolve, reject) => {
+      const where = { device_id };
+      this.deleteItem(DbTables.DeviceCapabilities, where)
           .then((data) => {
             resolve(data);
           })
