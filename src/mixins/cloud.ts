@@ -114,6 +114,12 @@ export const Cloud = toMixin(base => class Cloud extends base {
             this.ws.emit('response', {id, error});
           });
           break;
+        case 'delete_device':
+          this.deleteDevice(data.body.device_ident).then(data => {
+            this.ws.emit('response', {id, data})
+          }).catch(error => {
+            this.ws.emit('response', {id, error})
+          })
       }
     });
 
@@ -238,7 +244,6 @@ export const Cloud = toMixin(base => class Cloud extends base {
       });
       devices.push(opts)
     })
-
     return devices;
   }
 
