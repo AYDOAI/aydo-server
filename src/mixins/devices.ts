@@ -24,7 +24,10 @@ export const Devices = toMixin(base => class Devices extends base {
     });
   }
 
-  loadDevices() {
+  loadDevices(reload = false) {
+    if (reload) {
+      this.devices = {}
+    }
     this.getAllItems(DbTables.Devices).then(devices => {
       let counter = 0;
       const ready = (inc = true, force = false) => {
