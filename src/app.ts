@@ -225,11 +225,11 @@ export class App extends Base.with(Config, Database, Emitter, Log, RestApi, Driv
     return result;
   }
 
-  getDeviceIdByIdent(ident) {
+  getDeviceByIdent(ident) {
     let result = null;
     Object.keys(this.devices).forEach(key => {
       if (this.devices[key].ident === ident) {
-        result = this.devices[key].id;
+        result = this.devices[key];
       }
     });
     return result;
@@ -395,56 +395,25 @@ export class App extends Base.with(Config, Database, Emitter, Log, RestApi, Driv
 
   deleteDevice(device_ident: string) {
     return new Promise((resolve, reject) => {
-      const device_id = this.getDeviceIdByIdent(device_ident);
-      if (device_id) {
-        this.deleteDeviceSettings(device_id)
-            .then(() => {
-              return this.deleteDeviceCapabilities(device_id);
-            })
-            .then(() => {
-              return this.deleteItem(DbTables.Devices, { id: device_id });
-            })
-            .then((updatedCount) => {
-              if (updatedCount > 0) {
-                resolve({ message: 'Device and its settings successfully deleted.' });
-              } else {
-                reject({ message: 'An error occurred while deleting the device' })
-              }
-              this.loadDevices(true);
-              this.registerDevices();
-            })
-            .catch(error => {
-              reject(error);
-            });
+      const device = this.getDeviceByIdent(device_ident);
+      if (device && device.id) {
+        this.deleteItem(DbTables.Devices, { id: device.id }).then((updatedCount) => {
+          if (updatedCount > 0) {
+            device.deleteDeviceEx();
+            this.loadDevices(true);
+            this.registerDevices();
+            resolve({ message: 'Device and its settings successfully deleted.' });
+          } else {
+            reject({ message: 'An error occurred while deleting the device' });
+            return;
+          }
+        }).catch(error => {
+          console.log(error);
+          reject(error);
+        });
       } else {
         reject({ message: 'Device not found' });
       }
-    });
-  }
-
-  deleteDeviceSettings(device_id: number) {
-    return new Promise((resolve, reject) => {
-      const where = { device_id };
-      this.deleteItem(DbTables.DeviceSettings, where)
-          .then((data) => {
-            resolve(data);
-          })
-          .catch(error => {
-            reject(error);
-          });
-    });
-  }
-
-  deleteDeviceCapabilities(device_id: number) {
-    return new Promise((resolve, reject) => {
-      const where = { device_id };
-      this.deleteItem(DbTables.DeviceCapabilities, where)
-          .then((data) => {
-            resolve(data);
-          })
-          .catch(error => {
-            reject(error);
-          });
     });
   }
 
