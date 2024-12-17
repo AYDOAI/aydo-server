@@ -239,7 +239,7 @@ export const Cloud = toMixin(base => class Cloud extends base {
           defaultValue: set.default_value,
           params: set.params,
           value: set.value,
-          unique: (driver_setting.length && driver_setting[0].unique !== undefined) ? driver?.driver_settings?.unique : (set.unique || false)
+          unique: (driver_setting.length > 0 && driver_setting[0].unique !== undefined) ? driver_setting[0].unique : false
         })
       });
       devices.push(opts)
