@@ -23,6 +23,14 @@ async function up({context: queryInterface}) {
         "key": "id"
       },
     },
+    "location": {
+      "type": Sequelize.STRING,
+      "allowNull": true
+    },
+    "is_indoor": {
+      "type": Sequelize.BOOLEAN,
+      "allowNull": false
+    },
     "created_at": {
       "type": Sequelize.DATE,
       "allowNull": false
