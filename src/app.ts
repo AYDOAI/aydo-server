@@ -225,11 +225,11 @@ export class App extends Base.with(Config, Database, Emitter, Log, RestApi, Driv
     return result;
   }
 
-  getDeviceIdByIdent(ident) {
+  getDeviceByIdent(ident) {
     let result = null;
     Object.keys(this.devices).forEach(key => {
       if (this.devices[key].ident === ident) {
-        result = this.devices[key].id;
+        result = this.devices[key];
       }
     });
     return result;
@@ -395,22 +395,24 @@ export class App extends Base.with(Config, Database, Emitter, Log, RestApi, Driv
 
   deleteDevice(device_ident: string) {
     return new Promise((resolve, reject) => {
-      const device_id = this.getDeviceIdByIdent(device_ident);
-      if (device_id) {
-        this.deleteDeviceSettings(device_id)
-            .then(() => {
-              return this.deleteItem(DbTables.Devices, { id: device_id });
-            })
-            .then(() => {
-              this.loadDevices(true);
-              this.registerDevices();
-              resolve({ message: 'Device and its settings successfully deleted.' });
-            })
-            .catch(error => {
-              reject(error);
-            });
+      const device = this.getDeviceByIdent(device_ident);
+      if (device && device.id) {
+        this.deleteItem(DbTables.Devices, { id: device.id }).then((updatedCount) => {
+          if (updatedCount > 0) {
+            device.deleteDeviceEx();
+            this.loadDevices(true);
+            this.registerDevices();
+            resolve({ message: 'Device and its settings successfully deleted.' });
+          } else {
+            reject({ message: 'An error occurred while deleting the device' });
+            return;
+          }
+        }).catch(error => {
+          console.log(error);
+          reject(error);
+        });
       } else {
-        reject({ message: 'Device not found' })
+        reject({ message: 'Device not found' });
       }
     });
   }
@@ -448,7 +450,6 @@ export class App extends Base.with(Config, Database, Emitter, Log, RestApi, Driv
       }
     });
   }
-
 
   restart() {
     clearTimeout(this.restartTimeout);
