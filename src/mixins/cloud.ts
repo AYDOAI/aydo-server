@@ -107,6 +107,13 @@ export const Cloud = toMixin(base => class Cloud extends base {
             this.ws.emit('response', {id, error});
           });
           break;
+        case 'add_zone':
+          this.newZone(1, data.body).then((body) => {
+            this.ws.emit('response', { id, body });
+          }).catch(error => {
+            this.ws.emit('response', { id, error });
+          });
+          break;
         case 'device_command':
           this.deviceCommand(data.body).then((body) => {
             this.ws.emit('response', {id, body});
