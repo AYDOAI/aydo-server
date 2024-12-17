@@ -32,6 +32,7 @@
     "node-ipc": "^11.1.0",
     "qrcode": "^1.5.4",
     "sequelize": "^6.36.0",
+    "sequelize-cli": "^6.6.2",
     "socket.io-client": "^4.7.5",
     "sqlite3": "^5.1.7",
     "umzug": "^3.6.1",
