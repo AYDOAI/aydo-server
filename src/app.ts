@@ -434,12 +434,12 @@ export class App extends Base.with(Config, Database, Emitter, Log, RestApi, Driv
     return new Promise((resolve, reject) => {
       const driver = this.findDriverByClassName(body.class_name);
       try {
+        // body.user_id = user_id;
         this.createItem(DbTables.Zones, body).then((data) => {
           this.publishEx(EventTypes.ZoneCreate, { id: `${EventTypes.ZoneCreate}->${data.id}` }, {
-            id: data.id,
-            user_id: body.user_id,
-            driver_id: body.driver_id,
+            id: data.id
           }).then(() => {
+            this.registerZones();
             resolve(data);
           });
         }).catch(error => {

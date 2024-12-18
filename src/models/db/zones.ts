@@ -10,7 +10,7 @@ export class Zones extends BaseModel {
       },
       user_id: {
         type: app.Sequelize.DataTypes.INTEGER,
-        allowNull: false,
+        allowNull: true,
       },
       location: {
         type: app.Sequelize.DataTypes.STRING,

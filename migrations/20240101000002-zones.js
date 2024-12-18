@@ -14,7 +14,7 @@ async function up({context: queryInterface}) {
     },
     "user_id": {
       "type": Sequelize.INTEGER,
-      "allowNull": false,
+      "allowNull": true,
       "references": {
         "model": {
           "tableName": "users",

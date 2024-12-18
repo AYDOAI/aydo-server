@@ -272,9 +272,18 @@ export const Cloud = toMixin(base => class Cloud extends base {
   registerZones(force = false) {
     clearTimeout(this.zonesUpdateTimeout);
     const registerZones = () => {
-      const zones = this.buildZonesRO();
-      this.ws.emit('register_zones', zones);
-      this.zonesSend = true;
+      const zones = [];
+      this.getAllItems(DbTables.Zones).then(db_zones => {
+        db_zones.forEach(zone => {
+          zones.push({
+            name: zone.name,
+            location: zone.location,
+            is_indoor: zone.is_indoor,
+          });
+        });
+        this.ws.emit('register_zones', zones);
+        this.zonesSend = true;
+      });
     }
     if (force) {
       registerZones();
@@ -283,14 +292,5 @@ export const Cloud = toMixin(base => class Cloud extends base {
         registerZones();
       }, 5000);
     }
-  }
-
-  buildZonesRO() {
-    let zones = [];
-    this.getAllItems(DbTables.Zones).then(data => {
-      zones = data;
-    });
-
-    return zones;
   }
 });
