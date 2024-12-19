@@ -18,6 +18,7 @@ import {Emitter} from './mixins/emitter';
 import {IPC} from './mixins/ipc';
 import {Log} from './mixins/log';
 import {RestApi} from './mixins/rest-api';
+import {IUpdateDevice} from './models/update-device.interface';
 
 const mdns = require('mdns');
 
@@ -451,6 +452,28 @@ export class App extends Base.with(Config, Database, Emitter, Log, RestApi, Driv
     });
   }
 
+  updateDevice(data: IUpdateDevice) {
+    return new Promise((resolve, reject) => {
+      const device = this.getDeviceByIdent(data.device_ident);
+      if (device && device.id) {
+        this.updateItem(DbTables.Devices, {
+          name: data.device_name
+        }, {
+          id: device.id,
+        }).then(() => {
+            this.loadDevices(true);
+            this.registerDevices();
+            resolve({ message: 'Device updated' });
+          }).catch(error => {
+          console.log(error);
+          reject(error);
+        });
+      } else {
+        reject({ message: 'Device not found' });
+      }
+    });
+  }
+
   restart() {
     clearTimeout(this.restartTimeout);
     this.restartTimeout = setTimeout(() => {
@@ -493,5 +516,4 @@ export class App extends Base.with(Config, Database, Emitter, Log, RestApi, Driv
       }
     });
   }
-
 }

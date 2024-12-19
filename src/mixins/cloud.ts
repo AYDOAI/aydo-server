@@ -135,6 +135,14 @@ export const Cloud = toMixin(base => class Cloud extends base {
           }).catch(error => {
             this.ws.emit('response', {id, error})
           })
+          break;
+        case 'update_device':
+          this.updateDevice(data.body).then(data => {
+            this.ws.emit('response', {id, data})
+          }).catch(error => {
+            this.ws.emit('response', {id, error})
+          })
+          break;
       }
     });
 
