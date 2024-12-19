@@ -250,6 +250,18 @@ export const Cloud = toMixin(base => class Cloud extends base {
           disabled: cap.disabled,
         })
       });
+
+      if (device.db_device.driver_id == 3) {
+        opts.settings = [
+          {
+            "key": "zone",
+            "name": "Zone",
+            "type": "zone",
+            "required": true
+          },
+        ]
+      }
+
       device.db_device.device_settings.forEach(set => {
         const driver_setting = driver?.driver_settings?.filter(setting => setting.key === set.key);
         opts.settings.push({
