@@ -25,106 +25,111 @@ export const Devices = toMixin(base => class Devices extends base {
   }
 
   loadDevices(reload = false) {
-    if (reload) {
-      this.devices = {}
-    }
-    this.getAllItems(DbTables.Devices).then(devices => {
-      let counter = 0;
-      const ready = (inc = true, force = false) => {
-        if (inc) {
-          counter++;
-        }
-        if (counter === devices.length || force) {
-          this.publishEx(EventTypes.DevicesInit, {id: EventTypes.DevicesInit}).then(() => {
-            if (counter === 0) {
-              this.publishEx(EventTypes.DeviceDone, {id: EventTypes.DeviceDone});
-            }
-            this.initDeviceQueue.resume();
-          });
-        }
-      };
-
-      devices.sort((a, b) => {
-        const getSortIndex = (dbDriver) => {
-          const driver = this.drivers[dbDriver.class_name];
-          if (driver) {
-            return driver.sort_index;
-          } else {
-            return 0;
+    return new Promise((resolve, reject) => {
+      if (reload) {
+        this.devices = {}
+      }
+      this.getAllItems(DbTables.Devices).then(devices => {
+        let counter = 0;
+        const ready = (inc = true, force = false) => {
+          if (inc) {
+            counter++;
           }
-        }
-
-        let numA = getSortIndex(a.driver);
-        let numB = getSortIndex(b.driver);
-        a.sort_index = numA;
-        b.sort_index = numB;
-        if (numA > numB) {
-          return -1;
-        } else if (numA < numB) {
-          return 1;
-        } else {
-          return a.driver_id > b.driver_id ? 1 : (a.driver_id < b.driver_id ? -1 : 0);
-        }
-      });
-
-      let devicesData = [];
-      const disabledDevices = [];
-      devices.forEach(device => {
-        if (device.disabled) {
-          disabledDevices.push({id: device.id});
-        }
-      });
-      devices.forEach(device => {
-        if (device.parent_id && disabledDevices.find(item => item.id == device.parent_id)) {
-          disabledDevices.push({id: device.id});
-        }
-      });
-      devices.forEach(device => {
-        const disabled = this.config.disabledDrivers && device.driver ? this.config.disabledDrivers.find(item => item === device.driver.class_name) : false;
-        if (device.driver && !device.disabled && !disabled) {
-          if (!device.parent_id || !disabledDevices.find(item => item.id == device.parent_id)) {
-            const parent = device.parent_id ? devices.find(item => item.id === device.parent_id) : null;
-            devicesData.push({
-              id: device.id,
-              class_name: device.driver.class_name,
-              parent_id: parent ? parent.id : null
+          if (counter === devices.length || force) {
+            this.publishEx(EventTypes.DevicesInit, {id: EventTypes.DevicesInit}).then(() => {
+              if (counter === 0) {
+                this.publishEx(EventTypes.DeviceDone, {id: EventTypes.DeviceDone});
+                resolve(true);
+              }
+              this.initDeviceQueue.resume();
             });
+          } else {
+            resolve(true);
+          }
+        };
+
+        devices.sort((a, b) => {
+          const getSortIndex = (dbDriver) => {
+            const driver = this.drivers[dbDriver.class_name];
+            if (driver) {
+              return driver.sort_index;
+            } else {
+              return 0;
+            }
+          }
+
+          let numA = getSortIndex(a.driver);
+          let numB = getSortIndex(b.driver);
+          a.sort_index = numA;
+          b.sort_index = numB;
+          if (numA > numB) {
+            return -1;
+          } else if (numA < numB) {
+            return 1;
+          } else {
+            return a.driver_id > b.driver_id ? 1 : (a.driver_id < b.driver_id ? -1 : 0);
+          }
+        });
+
+        let devicesData = [];
+        const disabledDevices = [];
+        devices.forEach(device => {
+          if (device.disabled) {
+            disabledDevices.push({id: device.id});
+          }
+        });
+        devices.forEach(device => {
+          if (device.parent_id && disabledDevices.find(item => item.id == device.parent_id)) {
+            disabledDevices.push({id: device.id});
+          }
+        });
+        devices.forEach(device => {
+          const disabled = this.config.disabledDrivers && device.driver ? this.config.disabledDrivers.find(item => item === device.driver.class_name) : false;
+          if (device.driver && !device.disabled && !disabled) {
+            if (!device.parent_id || !disabledDevices.find(item => item.id == device.parent_id)) {
+              const parent = device.parent_id ? devices.find(item => item.id === device.parent_id) : null;
+              devicesData.push({
+                id: device.id,
+                class_name: device.driver.class_name,
+                parent_id: parent ? parent.id : null
+              });
+            } else {
+              device.disabled = true;
+            }
           } else {
             device.disabled = true;
           }
-        } else {
-          device.disabled = true;
-        }
-      });
-      devicesData = devicesData.filter(item => !item.delete).filter(item => !item.parent_id || devicesData.find(item1 => item1.id === item.parent_id));
+        });
+        devicesData = devicesData.filter(item => !item.delete).filter(item => !item.parent_id || devicesData.find(item1 => item1.id === item.parent_id));
 
-      const loadDevices = () => {
-        devices.forEach(device => {
-          if (!this.drivers[device.driver.class_name]) {
-            this.log(`Driver not exists: ${device.driver.class_name}`);
-            ready();
-          } else if (device.driver && !this.devices[device.ident]) {
-            if (!device.disabled) {
-              this.createDevice(device.driver.class_name, device).then((driver: any) => {
-                this.devices[device.ident] = driver;
-                this.devices[device.ident].installDevice().then(() => {
-                  this.addConnectQueue(driver.initMethod ? driver.initMethod : 'init', driver, true);
+        const loadDevices = () => {
+          devices.forEach(device => {
+            if (!this.drivers[device.driver.class_name]) {
+              this.log(`Driver not exists: ${device.driver.class_name}`);
+              ready();
+            } else if (device.driver && !this.devices[device.ident]) {
+              if (!device.disabled) {
+                this.createDevice(device.driver.class_name, device).then((driver: any) => {
+                  this.devices[device.ident] = driver;
+                  this.devices[device.ident].installDevice().then(() => {
+                    this.addConnectQueue(driver.initMethod ? driver.initMethod : 'init', driver, true);
+                    ready();
+                  });
+                }).catch((error) => {
+                  this.error(error);
                   ready();
                 });
-              }).catch((error) => {
-                this.error(error);
+              } else {
                 ready();
-              });
+              }
             } else {
               ready();
             }
-          } else {
-            ready();
-          }
-        });
-        ready(false);
-      };
-      loadDevices();
+          });
+          ready(false);
+        };
+        loadDevices();
+      });
     });
   }
 

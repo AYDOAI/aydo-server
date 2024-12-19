@@ -401,8 +401,7 @@ export class App extends Base.with(Config, Database, Emitter, Log, RestApi, Driv
         this.deleteItem(DbTables.Devices, { id: device.id }).then((updatedCount) => {
           if (updatedCount > 0) {
             device.deleteDeviceEx();
-            this.loadDevices(true);
-            this.registerDevices();
+            this.loadDevices(true).then(() => this.registerDevices(true));
             resolve({ message: 'Device and its settings successfully deleted.' });
           } else {
             reject({ message: 'An error occurred while deleting the device' });
@@ -427,8 +426,7 @@ export class App extends Base.with(Config, Database, Emitter, Log, RestApi, Driv
         }, {
           id: device.id,
         }).then(() => {
-            this.loadDevices(true);
-            this.registerDevices();
+            this.loadDevices(true).then(() => this.registerDevices(true));
             resolve({ message: 'Device updated' });
           }).catch(error => {
           console.log(error);
