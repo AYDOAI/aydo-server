@@ -262,7 +262,7 @@ export const Cloud = toMixin(base => class Cloud extends base {
       if (device.db_device.driver_id == 3) {
         opts.settings = [
           {
-            "key": "zone",
+            "key": "zoneId",
             "name": "Zone",
             "type": "zone",
             "required": true

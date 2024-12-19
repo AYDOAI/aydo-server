@@ -457,7 +457,8 @@ export class App extends Base.with(Config, Database, Emitter, Log, RestApi, Driv
       const device = this.getDeviceByIdent(data.device_ident);
       if (device && device.id) {
         this.updateItem(DbTables.Devices, {
-          name: data.device_name
+          name: data.device_name,
+          zone_id: data.zone_id,
         }, {
           id: device.id,
         }).then(() => {
