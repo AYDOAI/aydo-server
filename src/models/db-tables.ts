@@ -5,4 +5,5 @@ export enum DbTables {
   Drivers = 'drivers',
   Events = 'events',
   Users = 'users',
+  Zones = 'zones',
 }
