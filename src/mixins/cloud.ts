@@ -231,6 +231,7 @@ export const Cloud = toMixin(base => class Cloud extends base {
     Object.keys(this.devices).forEach(class_name => {
       const device = this.devices[class_name];
       const driver = this.findDriverById(device.db_device.driver_id);
+      
       const opts = {
         name: device.device_name,
         ident: device.ident,
@@ -260,12 +261,14 @@ export const Cloud = toMixin(base => class Cloud extends base {
         })
       });
 
-      opts.settings.push({
-        "key": "zoneId",
-        "name": "Zone",
-        "type": "zone",
-        "required": true
-      });
+      if (driver.class_name == 'zigbee2mqtt.subdevice') {
+        opts.settings.push({
+          "key": "zoneId",
+          "name": "Zone",
+          "type": "zone",
+          "required": true
+        });
+      }
 
       device.db_device.device_settings.forEach(set => {
         const driver_setting = driver?.driver_settings?.filter(setting => setting.key === set.key);
