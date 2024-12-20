@@ -243,6 +243,7 @@ export const Cloud = toMixin(base => class Cloud extends base {
         capabilities: [],
         settings: []
       };
+
       device.db_device.device_capabilities.forEach(cap => {
         opts.capabilities.push({
           deviceId: cap.device_id,
@@ -259,16 +260,12 @@ export const Cloud = toMixin(base => class Cloud extends base {
         })
       });
 
-      if (device.db_device.driver_id == 3) {
-        opts.settings = [
-          {
-            "key": "zoneId",
-            "name": "Zone",
-            "type": "zone",
-            "required": true
-          },
-        ]
-      }
+      opts.settings.push({
+        "key": "zoneId",
+        "name": "Zone",
+        "type": "zone",
+        "required": true
+      });
 
       device.db_device.device_settings.forEach(set => {
         const driver_setting = driver?.driver_settings?.filter(setting => setting.key === set.key);
