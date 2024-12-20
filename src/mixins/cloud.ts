@@ -2,7 +2,7 @@ import {AppOptions} from '../app';
 import {toMixin} from '../../lib/foibles';
 import * as os from 'os';
 import {EventTypes} from '../models/event-types';
-import { DbTables } from 'src/models/db-tables';
+import { DbTables } from '../models/db-tables';
 
 const io = require('socket.io-client');
 
