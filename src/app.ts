@@ -352,8 +352,7 @@ export class App extends Base.with(Config, Database, Emitter, Log, RestApi, Driv
                 driver_id: body.driver_id,
               }).then(() => {
                 this.devicesCache = null;
-                this.registerDevices();
-                this.loadDevices();
+                this.loadDevices().then(() => this.registerDevices(true));
                 // this.restart();
                 resolve(data);
               });
