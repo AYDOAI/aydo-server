@@ -145,8 +145,7 @@ export class App extends Base.with(Config, Database, Emitter, Log, RestApi, Driv
                 //   type: 'device-create',
                 //   device: {id: device.id, name: device.name, icon: params ? params.icon : null, zone_id: device.zone_id}
                 // });
-                this.loadDevices();
-                this.registerDevices();
+                this.loadDevices().then(() =>this.registerDevices(true));
                 callback(null, device);
               }).catch(error => {
                 callback(error, null);
