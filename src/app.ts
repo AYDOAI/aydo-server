@@ -400,8 +400,7 @@ export class App extends Base.with(Config, Database, Emitter, Log, RestApi, Driv
         this.deleteItem(DbTables.Devices, { id: device.id }).then((updatedCount) => {
           if (updatedCount > 0) {
             device.deleteDeviceEx();
-            this.loadDevices(true);
-            this.registerDevices();
+            this.loadDevices(true).then(() => this.registerDevices(true));
             resolve({ message: 'Device and its settings successfully deleted.' });
           } else {
             reject({ message: 'An error occurred while deleting the device' });
@@ -417,17 +416,51 @@ export class App extends Base.with(Config, Database, Emitter, Log, RestApi, Driv
     });
   }
 
+  deleteDeviceSettings(device_id: number) {
+    return new Promise((resolve, reject) => {
+      const where = { device_id };
+      this.deleteItem(DbTables.DeviceSettings, where)
+          .then((data) => {
+            resolve(data);
+          })
+          .catch(error => {
+            reject(error);
+          });
+    });
+  }
+
+  newZone(user_id: number, body: any) {
+    return new Promise((resolve, reject) => {
+      const driver = this.findDriverByClassName(body.class_name);
+      try {
+        // body.user_id = user_id;
+        this.createItem(DbTables.Zones, body).then((data) => {
+          this.publishEx(EventTypes.ZoneCreate, { id: `${EventTypes.ZoneCreate}->${data.id}` }, {
+            id: data.id
+          }).then(() => {
+            this.registerZones();
+            resolve(data);
+          });
+        }).catch(error => {
+          reject(error);
+        })
+      } catch (e) {
+        reject(e);
+      }
+    });
+  }
+
   updateDevice(data: IUpdateDevice) {
     return new Promise((resolve, reject) => {
       const device = this.getDeviceByIdent(data.device_ident);
       if (device && device.id) {
         this.updateItem(DbTables.Devices, {
-          name: data.device_name
+          name: data.device_name,
+          zone_id: data.zone_id,
         }, {
           id: device.id,
         }).then(() => {
-            this.loadDevices(true);
-            this.registerDevices();
+            this.loadDevices(true).then(() => this.registerDevices(true));
             resolve({ message: 'Device updated' });
           }).catch(error => {
           console.log(error);
@@ -481,5 +514,4 @@ export class App extends Base.with(Config, Database, Emitter, Log, RestApi, Driv
       }
     });
   }
-
 }

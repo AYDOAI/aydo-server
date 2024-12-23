@@ -10,6 +10,14 @@ export class Zones extends BaseModel {
       },
       user_id: {
         type: app.Sequelize.DataTypes.INTEGER,
+        allowNull: true,
+      },
+      location: {
+        type: app.Sequelize.DataTypes.STRING,
+        allowNull: true,
+      },
+      is_indoor: {
+        type: app.Sequelize.DataTypes.BOOLEAN,
         allowNull: false,
       },
       created_at: {
@@ -17,6 +25,10 @@ export class Zones extends BaseModel {
       },
       updated_at: {
         type: app.Sequelize.DataTypes.DATE,
+      },
+      deleted_at: {
+        type: app.Sequelize.DataTypes.DATE,
+        allowNull: true,
       },
     }, {
       underscored: true,
@@ -32,5 +44,4 @@ export class Zones extends BaseModel {
       },
     };
   }
-
 }

@@ -81,6 +81,9 @@ export enum EventTypes {
   DevicesList = 'devices->list',
   DevicesAdd = 'devices->add',
 
+  ZoneCreate = 'zone->create',
+  ZoneDone = 'zone->done',
+
   UpdateSensor = 'sensor->update',
   RemoveSensor = 'sensor->remove',
   UpdateSensorEx = 'sensor->update-ex',

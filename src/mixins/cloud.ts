@@ -2,6 +2,7 @@ import {AppOptions} from '../app';
 import {toMixin} from '../../lib/foibles';
 import * as os from 'os';
 import {EventTypes} from '../models/event-types';
+import { DbTables } from 'src/models/db-tables';
 
 const io = require('socket.io-client');
 
@@ -26,8 +27,11 @@ export const Cloud = toMixin(base => class Cloud extends base {
   driversSend = false;
   devicesReady = false;
   devicesSend = false;
+  zonesReady = false;
+  zonesSend = false;
   driversUpdateTimeout = null;
   devicesUpdateTimeout = null;
+  zonesUpdateTimeout = null;
   deviceCapabilities = [];
   deviceCapabilitiesLastUpdate = null;
 
@@ -82,6 +86,7 @@ export const Cloud = toMixin(base => class Cloud extends base {
       this.cloudReady = false;
       this.driversSend = false;
       this.devicesSend = false;
+      this.zonesSend = false;
     });
 
     this.ws.on('gateway_registered', () => {
@@ -92,6 +97,9 @@ export const Cloud = toMixin(base => class Cloud extends base {
       }
       if (this.devicesReady && !this.devicesSend) {
         this.registerDevices();
+      }
+      if (this.zonesReady && !this.zonesSend) {
+        this.registerZones();
       }
     });
 
@@ -105,6 +113,13 @@ export const Cloud = toMixin(base => class Cloud extends base {
             this.ws.emit('response', {id, body});
           }).catch(error => {
             this.ws.emit('response', {id, error});
+          });
+          break;
+        case 'add_zone':
+          this.newZone(1, data.body).then((body) => {
+            this.ws.emit('response', { id, body });
+          }).catch(error => {
+            this.ws.emit('response', { id, error });
           });
           break;
         case 'device_command':
@@ -142,6 +157,13 @@ export const Cloud = toMixin(base => class Cloud extends base {
       this.devicesReady = true;
       if (!this.devicesSend) {
         this.registerDevices(true);
+      }
+    });
+
+    this.subscribe(EventTypes.ZoneDone, () => {
+      this.zonesReady = true;
+      if (!this.zonesSend) {
+        this.registerZones(true);
       }
     });
 
@@ -236,6 +258,18 @@ export const Cloud = toMixin(base => class Cloud extends base {
           disabled: cap.disabled,
         })
       });
+
+      if (device.db_device.driver_id == 3) {
+        opts.settings = [
+          {
+            "key": "zoneId",
+            "name": "Zone",
+            "type": "zone",
+            "required": true
+          },
+        ]
+      }
+
       device.db_device.device_settings.forEach(set => {
         const driver_setting = driver?.driver_settings?.filter(setting => setting.key === set.key);
         opts.settings.push({
@@ -255,4 +289,28 @@ export const Cloud = toMixin(base => class Cloud extends base {
     return devices;
   }
 
+  registerZones(force = false) {
+    clearTimeout(this.zonesUpdateTimeout);
+    const registerZones = () => {
+      const zones = [];
+      this.getAllItems(DbTables.Zones).then(db_zones => {
+        db_zones.forEach(zone => {
+          zones.push({
+            name: zone.name,
+            location: zone.location,
+            is_indoor: zone.is_indoor,
+          });
+        });
+        this.ws.emit('register_zones', zones);
+        this.zonesSend = true;
+      });
+    }
+    if (force) {
+      registerZones();
+    } else {
+      this.zonesUpdateTimeout = setTimeout(() => {
+        registerZones();
+      }, 5000);
+    }
+  }
 });
