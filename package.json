@@ -12,6 +12,24 @@
   },
   "author": "AYDO Team",
   "license": "ISC",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.18.2",
+    "jsonwebtoken": "^9.0.2",
+    "mdns": "^2.7.2",
+    "mqtt": "4.3.7",
+    "node-eta": "^0.9.0",
+    "node-ipc": "^11.1.0",
+    "qrcode": "^1.5.4",
+    "sequelize": "^6.36.0",
+    "sequelize-cli": "^6.6.2",
+    "socket.io-client": "^4.7.5",
+    "sqlite3": "^5.1.7",
+    "umzug": "^3.6.1",
+    "zigbee-herdsman": "^2.1.9",
+    "zigbee-herdsman-converters": "20.58.0",
+    "zigbee2mqtt-frontend": "0.7.6"
+  },
   "devDependencies": {
     "@types/node": "^20.11.16",
     "nodemon": "^3.0.3",
@@ -21,23 +39,5 @@
     "typescript": "^5.3.3",
     "webpack": "^5.90.1",
     "webpack-cli": "^5.1.4"
-  },
-  "dependencies": {
-    "cors": "^2.8.5",
-    "express": "^4.18.2",
-    "jsonwebtoken": "^9.0.2",
-    "mdns": "^2.7.2",
-    "mqtt": "^5.5.0",
-    "node-eta": "^0.9.0",
-    "node-ipc": "^11.1.0",
-    "qrcode": "^1.5.4",
-    "sequelize": "^6.36.0",
-    "sequelize-cli": "^6.6.2",
-    "socket.io-client": "^4.7.5",
-    "sqlite3": "^5.1.7",
-    "umzug": "^3.6.1",
-    "zigbee-herdsman": "2.1.7",
-    "zigbee-herdsman-converters": "20.47.0",
-    "zigbee2mqtt-frontend": "0.7.4"
   }
 }
