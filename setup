@@ -64,34 +64,34 @@ fi
 
 mkdir -p /srv/
 
-echo "Cloning zigbee2mqtt"
-mkdir -p /srv/zigbee2mqtt
-git clone --depth 1 --branch 1.41.0 https://github.com/Koenkk/zigbee2mqtt.git /srv/zigbee2mqtt
-cd /srv/zigbee2mqtt
-echo "Installing zigbee2mqtt dependencies"
-npm ci
-echo "Compiling zigbee2mqtt"
-npm run build
+# echo "Cloning zigbee2mqtt"
+# mkdir -p /srv/zigbee2mqtt
+# git clone --depth 1 --branch 1.41.0 https://github.com/Koenkk/zigbee2mqtt.git /srv/zigbee2mqtt
+# cd /srv/zigbee2mqtt
+# echo "Installing zigbee2mqtt dependencies"
+# npm ci
+# echo "Compiling zigbee2mqtt"
+# npm run build
 
-if [ "$OS" == "linux" ]; then
-echo "Installing zigbee2mqtt service"
-echo "[Unit]
-Description=zigbee2mqtt
-After=network.target
-[Service]
-ExecStart=/usr/local/bin/node /srv/zigbee2mqtt/index.js
-WorkingDirectory=/srv/zigbee2mqtt
-StandardOutput=inherit
-StandardError=inherit
-Restart=always
-User=root
-[Install]
-WantedBy=multi-user.target
-" > /etc/systemd/system/zigbee2mqtt.service
-systemctl daemon-reload
-# systemctl start zigbee2mqtt
-systemctl enable zigbee2mqtt.service
-fi
+# if [ "$OS" == "linux" ]; then
+# echo "Installing zigbee2mqtt service"
+# echo "[Unit]
+# Description=zigbee2mqtt
+# After=network.target
+# [Service]
+# ExecStart=/usr/local/bin/node /srv/zigbee2mqtt/index.js
+# WorkingDirectory=/srv/zigbee2mqtt
+# StandardOutput=inherit
+# StandardError=inherit
+# Restart=always
+# User=root
+# [Install]
+# WantedBy=multi-user.target
+# " > /etc/systemd/system/zigbee2mqtt.service
+# systemctl daemon-reload
+# # systemctl start zigbee2mqtt
+# systemctl enable zigbee2mqtt.service
+# fi
 
 mkdir -p /srv/code
 mkdir -p /srv/config
@@ -104,9 +104,9 @@ git clone --depth 1 --branch AYDO-main https://github.com/AYDOAI/aydo-plugin-zig
 
 cd /srv/code/zigbee2mqtt
 
-echo "Copy zigbee2mqtt configuration file"
-cp ./zigbee2mqtt.configuration.yaml /srv/zigbee2mqtt/data/configuration.example.yaml
-cp ./zigbee2mqtt.configuration.yaml /srv/zigbee2mqtt/data/configuration.yaml
+# echo "Copy zigbee2mqtt configuration file"
+# cp ./zigbee2mqtt.configuration.yaml /srv/zigbee2mqtt/data/configuration.example.yaml
+# cp ./zigbee2mqtt.configuration.yaml /srv/zigbee2mqtt/data/configuration.yaml
 
 echo "Installing zigbee2mqtt plugin dependencies"
 npm install || exit 1
