@@ -196,6 +196,12 @@ export const Cloud = toMixin(base => class Cloud extends base {
           type: driver.driver_type,
           settings: driver.driver_settings
         };
+
+        if (class_name == 'zigbee2mqtt') {
+          let setting = opts.settings.find(i => i.key == 'port');
+          setting.items = this.searchSerialDevices(['Zigbee', 'Dongle']);
+        }
+
         drivers.push(opts)
       })
       this.ws.emit('register_drivers', drivers);
@@ -312,5 +318,40 @@ export const Cloud = toMixin(base => class Cloud extends base {
         registerZones();
       }, 5000);
     }
+  }
+
+  searchSerialDevices(keywords: string[]) {
+    const fs = require('fs');
+    const path = require('path');
+    const directory = '/dev/serial/by-id';
+
+    const devices: any = [];
+
+    try {
+      const files = fs.readdirSync(directory);
+      files.forEach((file: any) => {
+        const linkPath = path.join(directory, file);
+        try {
+          let realPath = fs.readlinkSync(linkPath);
+          realPath = realPath.replace(/..\/../g, '/dev');
+          const formattedDeviceName = file.replace(/_/g, ' ');
+          if (keywords.some(keyword => formattedDeviceName.includes(keyword))) {
+            devices.push({
+              id: realPath,
+              title: formattedDeviceName
+            });
+          }
+        } catch (error) {
+          console.error(`Error processing symbolic link: ${linkPath}`);
+        }
+      });
+    } catch (err) {
+      console.error(`Error reading directory: ${directory}`);
+    }
+
+    console.log('***Serial-Devices***');
+    console.log(devices);
+
+    return devices;
   }
 });
