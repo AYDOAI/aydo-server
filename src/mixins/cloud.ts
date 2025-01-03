@@ -358,10 +358,12 @@ export const Cloud = toMixin(base => class Cloud extends base {
         const paths = stdout.trim().split('\n');
 
         for (const realPath of paths) {
-          devices.push({
-            id: realPath,
-            title: realPath,
-          });
+          if (realPath && realPath !== '') {
+            devices.push({
+              id: realPath,
+              title: realPath,
+            });
+          }
         }
       } catch (findError) {
         console.error('Error executing find command:', findError);
