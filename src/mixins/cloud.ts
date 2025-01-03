@@ -351,7 +351,7 @@ export const Cloud = toMixin(base => class Cloud extends base {
 
       try {
         const stdout = execSync(
-          `find /dev -regex '.*/tty(AML|USB|AMA|ACM|MFD)[0-9]*'`,
+          `find /dev -regex '.*/tty\(AML\|USB\|AMA\|ACM\|MFD\)[0-9]*'`,
           {encoding: 'utf8'}
         );
 
