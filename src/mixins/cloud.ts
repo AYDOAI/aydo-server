@@ -3,7 +3,6 @@ import {toMixin} from '../../lib/foibles';
 import * as os from 'os';
 import {EventTypes} from '../models/event-types';
 import {DbTables} from '../models/db-tables';
-import {execSync} from 'child_process';
 
 const io = require('socket.io-client');
 
@@ -347,26 +346,23 @@ export const Cloud = toMixin(base => class Cloud extends base {
         }
       });
     } catch (err) {
-      console.error(`Error reading directory: ${directory}`);
+      console.warn(`Directory ${directory} is not accessible. Attempting to scan /dev manually...`);
 
       try {
-        const stdout = execSync(
-          `find /dev -regex '.*/tty\(AML\|USB\|AMA\|ACM\|MFD\)[0-9]*'`,
-          {encoding: 'utf8'}
-        );
+        const devFiles = fs.readdirSync('/dev');
 
-        const paths = stdout.trim().split('\n');
-
-        for (const realPath of paths) {
-          if (realPath && realPath !== '') {
+        const regex = /tty(AML|USB|AMA|ACM|MFD)[0-9]*/;
+        for (const file of devFiles) {
+          if (regex.test(file)) {
+            const realPath = path.join('/dev', file);
             devices.push({
               id: realPath,
               title: realPath,
             });
           }
         }
-      } catch (findError) {
-        console.error('Error executing find command:', findError);
+      } catch (scanError) {
+        console.error('Error scanning /dev directory:', scanError);
       }
     }
 
