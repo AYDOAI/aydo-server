@@ -2,7 +2,8 @@ import {AppOptions} from '../app';
 import {toMixin} from '../../lib/foibles';
 import * as os from 'os';
 import {EventTypes} from '../models/event-types';
-import { DbTables } from '../models/db-tables';
+import {DbTables} from '../models/db-tables';
+import {execSync} from 'child_process';
 
 const io = require('socket.io-client');
 
@@ -347,6 +348,24 @@ export const Cloud = toMixin(base => class Cloud extends base {
       });
     } catch (err) {
       console.error(`Error reading directory: ${directory}`);
+
+      try {
+        const stdout = execSync(
+          `find /dev -regex '.*/tty(AML|USB|AMA|ACM|MFD)[0-9]*'`,
+          {encoding: 'utf8'}
+        );
+
+        const paths = stdout.trim().split('\n');
+
+        for (const realPath of paths) {
+          devices.push({
+            id: realPath,
+            title: realPath,
+          });
+        }
+      } catch (findError) {
+        console.error('Error executing find command:', findError);
+      }
     }
 
     console.log('***Serial-Devices***');
