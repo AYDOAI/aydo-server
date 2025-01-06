@@ -241,4 +241,34 @@ export const Devices = toMixin(base => class Devices extends base {
     });
   }
 
+  removeDevice(ident) {
+    return new Promise((resolve, reject) => {
+      if (this.devices[ident]) {
+        try {
+          delete this.devices[ident];
+          resolve(`Device ${ident} removed`);
+        } catch (error) {
+          reject(`Error removing device ${ident}: ${error}`);
+        }
+      }
+    });
+  }
+
+  updateDeviceParameters(ident, params) {
+    return new Promise((resolve, reject) => {
+      if (this.devices[ident]) {
+        try {
+          Object.keys(params).forEach((key) => {
+            if (this.devices[ident].hasOwnProperty(key)) {
+              this.devices[ident][key] = params[key];
+            }
+          });
+          resolve(`Device ${ident} parameters updated`);
+        } catch (error) {
+          reject(`Error updating parameters for device ${ident}: ${error}`);
+        }
+      }
+    });
+  }
+
 });

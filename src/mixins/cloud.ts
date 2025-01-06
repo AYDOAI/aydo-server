@@ -232,7 +232,7 @@ export const Cloud = toMixin(base => class Cloud extends base {
       const device = this.devices[class_name];
       const driver = this.findDriverById(device.db_device.driver_id);
       const opts = {
-        name: device.device_name,
+        name: device.name,
         ident: device.ident,
         identifier: device.identifier,
         driverId: device.db_device.driver_id,
