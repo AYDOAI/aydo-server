@@ -1,3 +1,4 @@
+import {EventTypes} from 'src/models/event-types';
 import {DbTables} from '../models/db-tables';
 import {BaseDriver} from './base-driver';
 import {Connect2} from './mixins/connect2';
@@ -140,6 +141,7 @@ export class Plugin extends BaseDriver.with(Connect2, Dynamic) {
       if (!this.lastStatusUpdateTime) {
         this.lastStatusUpdateTime = time;
       }
+
       this.log(`${time - this.lastStatusUpdateTime} ${JSON.stringify(status)}`);
       this.lastStatusUpdateTime = time;
 
@@ -211,8 +213,16 @@ export class Plugin extends BaseDriver.with(Connect2, Dynamic) {
           //       this.current_status[key] = status[key];
           //     }
           //   }
-            if (key === 'capabilities') {
-              this.updateCapabilities(status[key]);
+          if (key === 'capabilities') {
+            this.updateCapabilities(status[key]);
+
+            let app = this.app;
+            setTimeout(function () {
+              app.devicesSend = false;
+              app.publishEx(EventTypes.DeviceDone, {id: EventTypes.DeviceDone});
+            }, 5000);
+          }
+
           //     this.setParam(key, status[key]);
           //     this.saveDeviceParams();
           //   } else if (key === 'update_settings') {
@@ -244,7 +254,6 @@ export class Plugin extends BaseDriver.with(Connect2, Dynamic) {
           //     this.emit(`update_smoke`, status[key]);
           //   } else if (key.indexOf('tamper_') === 0 && (this.supportTamper || this.supportTamperEx)) {
           //     this.emit(`update_tamper`, status[key]);
-            }
         });
         if (updates.length) {
           this.app.updateCapabilityValues(this.ident, this.identifier, updates);

@@ -121,6 +121,12 @@ export class App extends Base.with(Config, Database, Emitter, Log, RestApi, Driv
               }).then((data) => {
                 if (input.params.capabilities) {
                   device.updateCapabilities(input.params.capabilities);
+
+                  let that = this;
+                  setTimeout(function () {
+                    that.devicesSend = false;
+                    that.publishEx(EventTypes.DeviceDone, {id: EventTypes.DeviceDone});
+                  }, 5000);
                 }
                 callback(null, data);
               }).catch((error) => {

@@ -2,5 +2,6 @@ database.sqlite
 /plugins
 /node_modules
 /config
-
+dist/
+.vscode/
 .idea
