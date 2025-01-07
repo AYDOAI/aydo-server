@@ -1,4 +1,4 @@
-import {EventTypes} from 'src/models/event-types';
+import {EventTypes} from '../models/event-types';
 import {DbTables} from '../models/db-tables';
 import {BaseDriver} from './base-driver';
 import {Connect2} from './mixins/connect2';
@@ -133,6 +133,9 @@ export class Plugin extends BaseDriver.with(Connect2, Dynamic) {
     this.lastStatusEventName = this.status_event_name;
     this.app.log(`subscribe ${this.status_event_name}`);
     this.app.subscribe(this.status_event_name, (status) => {
+      console.log('***statusSubscribe**************************************************')
+      console.log(status)
+      
       // if (status && status.parent_identifier && status.parent_identifier !== this.getParam('parent_id')) {
       //   console.log(`Skip status update ${this.getParam('parent_id')} ${status.parent_identifier}`);
       //   return;
