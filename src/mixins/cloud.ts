@@ -2,7 +2,7 @@ import {AppOptions} from '../app';
 import {toMixin} from '../../lib/foibles';
 import * as os from 'os';
 import {EventTypes} from '../models/event-types';
-import { DbTables } from 'src/models/db-tables';
+import {DbTables} from '../models/db-tables';
 
 const io = require('socket.io-client');
 
@@ -237,6 +237,7 @@ export const Cloud = toMixin(base => class Cloud extends base {
     Object.keys(this.devices).forEach(class_name => {
       const device = this.devices[class_name];
       const driver = this.findDriverById(device.db_device.driver_id);
+
       const opts = {
         name: device.name,
         ident: device.ident,
@@ -249,6 +250,7 @@ export const Cloud = toMixin(base => class Cloud extends base {
         capabilities: [],
         settings: []
       };
+
       device.db_device.device_capabilities.forEach(cap => {
         opts.capabilities.push({
           deviceId: cap.device_id,
@@ -265,19 +267,17 @@ export const Cloud = toMixin(base => class Cloud extends base {
         })
       });
 
-      if (device.db_device.driver_id == 3) {
-        opts.settings = [
-          {
-            "key": "zoneId",
-            "name": "Zone",
-            "type": "zone",
-            "required": true
-          },
-        ]
+      if (driver.class_name == 'zigbee2mqtt.subdevice') {
+        opts.settings.push({
+          "key": "zoneId",
+          "name": "Zone",
+          "type": "zone",
+          "required": true
+        });
       }
 
       device.db_device.device_settings.forEach(set => {
-        const driver_setting = driver?.driver_settings?.filter(setting => setting.key === set.key);
+        const driverSetting = driver?.driver_settings?.find(setting => setting.key === set.key);
         opts.settings.push({
           deviceId: set.device_id,
           key: set.key,
@@ -287,7 +287,8 @@ export const Cloud = toMixin(base => class Cloud extends base {
           defaultValue: set.default_value,
           params: set.params,
           value: set.value,
-          unique: (driver_setting.length > 0 && driver_setting[0].unique !== undefined) ? driver_setting[0].unique : false
+          unique: (driverSetting && driverSetting.unique !== undefined) ? driverSetting.unique : false,
+          required: driverSetting?.required,
         })
       });
       devices.push(opts)
@@ -346,7 +347,24 @@ export const Cloud = toMixin(base => class Cloud extends base {
         }
       });
     } catch (err) {
-      console.error(`Error reading directory: ${directory}`);
+      console.warn(`Directory ${directory} is not accessible. Attempting to scan /dev manually...`);
+
+      try {
+        const devFiles = fs.readdirSync('/dev');
+
+        const regex = /tty(AML|USB|AMA|ACM|MFD)[0-9]*/;
+        for (const file of devFiles) {
+          if (regex.test(file)) {
+            const realPath = path.join('/dev', file);
+            devices.push({
+              id: realPath,
+              title: realPath,
+            });
+          }
+        }
+      } catch (scanError) {
+        console.error('Error scanning /dev directory:', scanError);
+      }
     }
 
     console.log('***Serial-Devices***');
