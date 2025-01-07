@@ -237,9 +237,9 @@ export const Cloud = toMixin(base => class Cloud extends base {
     Object.keys(this.devices).forEach(class_name => {
       const device = this.devices[class_name];
       const driver = this.findDriverById(device.db_device.driver_id);
-      
+
       const opts = {
-        name: device.device_name,
+        name: device.name,
         ident: device.ident,
         identifier: device.identifier,
         driverId: device.db_device.driver_id,
@@ -277,7 +277,7 @@ export const Cloud = toMixin(base => class Cloud extends base {
       }
 
       device.db_device.device_settings.forEach(set => {
-        const driver_setting = driver?.driver_settings?.filter(setting => setting.key === set.key);
+        const driverSetting = driver?.driver_settings?.find(setting => setting.key === set.key);
         opts.settings.push({
           deviceId: set.device_id,
           key: set.key,
@@ -287,7 +287,8 @@ export const Cloud = toMixin(base => class Cloud extends base {
           defaultValue: set.default_value,
           params: set.params,
           value: set.value,
-          unique: (driver_setting.length > 0 && driver_setting[0].unique !== undefined) ? driver_setting[0].unique : false
+          unique: (driverSetting && driverSetting.unique !== undefined) ? driverSetting.unique : false,
+          required: driverSetting?.required,
         })
       });
       devices.push(opts)
