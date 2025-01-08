@@ -304,7 +304,8 @@ export const BaseDriver = toExtendable(class BaseDriver extends Base.with(Queue,
 
   updateCapabilities(capabilities) {
     capabilities.forEach(capability => {
-      const cap = this.db_device.device_capabilities.find(item => item.ident === capability.ident && ((!capability.index && item.index === '') || item.index == capability.index));
+      // const cap = this.db_device.device_capabilities.find(item => item.ident === capability.ident && ((!capability.index && item.index === '') || item.index == capability.index));
+      const cap = this.db_device.device_capabilities.find(item => item.ident === capability.ident && item.device_id === this.db_device.id);
       if (!cap) {
         capability.device_id = this.db_device.id;
         capability.index = capability.index ? capability.index : '';
@@ -321,7 +322,7 @@ export const BaseDriver = toExtendable(class BaseDriver extends Base.with(Queue,
           this.error(error);
         });
       }
-    })
+    });
   }
 
   reloadCapabilities() {

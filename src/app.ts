@@ -137,22 +137,14 @@ export class App extends Base.with(Config, Database, Emitter, Log, RestApi, Driv
               if (!input.name) {
                 input.name = this.drivers[input.model].driver_name;
               }
+
               const params = Object.assign({icon}, input.params);
               const driver_id = this.drivers[input.model].db_driver.id;
-              this.createSubDevice(input.class_name, input.ident, input.name, driver_id, params, input.zone_id, input.parent, input.user_id).then((device: any) => {
-                // let params;
-                // try {
-                //   params = JSON.parse(device.params);
-                // } catch (e) {
-                //   this.error(e)
-                // }
-                // this.app.ws.sendToAll('notify', {
-                //   system: true,
-                //   type: 'device-create',
-                //   device: {id: device.id, name: device.name, icon: params ? params.icon : null, zone_id: device.zone_id}
-                // });
-                this.loadDevices().then(() =>this.registerDevices(true));
-                callback(null, device);
+              this.createSubDevice(input.class_name, input.ident, input.name, driver_id, params, input.zone_id, input.parent, input.user_id).then((db_device: any) => {
+                //TODO: Лучше не трогать, иначе отваливается добавление капабилити
+                this.loadDevices();
+                this.registerDevices();
+                callback(null, db_device);
               }).catch(error => {
                 callback(error, null);
               });
@@ -271,6 +263,7 @@ export class App extends Base.with(Config, Database, Emitter, Log, RestApi, Driv
         class_name, ident, model, name, params, zone_id, parent
       }, (error, result) => {
         if (error) {
+          this.log(`${ident}`, 'drivers', 'check-sub-device-error', error);
           reject(error);
         } else {
           this.publishEx(EventTypes.DeviceCheckSubDevice, {id: `${EventTypes.DeviceCheckSubDevice}->${ident}`}, result.id, {
