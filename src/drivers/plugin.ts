@@ -142,7 +142,7 @@ export class Plugin extends BaseDriver.with(Connect2, Dynamic) {
         this.lastStatusUpdateTime = time;
       }
 
-      this.log(`${time - this.lastStatusUpdateTime} ${JSON.stringify(status)}`);
+      this.log('status-subscribe', time - this.lastStatusUpdateTime, JSON.stringify(status));
       this.lastStatusUpdateTime = time;
 
       if (status.custom_settings) {
@@ -214,6 +214,7 @@ export class Plugin extends BaseDriver.with(Connect2, Dynamic) {
           //     }
           //   }
           if (key === 'capabilities') {
+            this.log('status-subscribe', 'update-capabilities', status[key]);
             this.updateCapabilities(status[key]);
 
             let app = this.app;

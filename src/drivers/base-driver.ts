@@ -316,6 +316,8 @@ export const BaseDriver = toExtendable(class BaseDriver extends Base.with(Queue,
         capability.disabled = capability.disabled ? capability.disabled : false;
         capability.options = JSON.stringify(capability.options ? capability.options : {});
         capability.params = JSON.stringify(capability.params ? capability.params : {});
+
+        this.app.log('create-device-capability', capability);
         this.app.createItem(DbTables.DeviceCapabilities, capability).then((row) => {
           this.reloadCapabilities();
         }).catch(error => {

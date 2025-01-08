@@ -63,6 +63,8 @@ export class App extends Base.with(Config, Database, Emitter, Log, RestApi, Driv
 
     this.subDevicesQueue = new BetterQueue((input, callback) => {
       try {
+        this.log(`${input.ident}`, 'sub-devices-queue', input.params);
+
         input.ident = getDeviceIdent(input.ident);
         if (!input.params) {
           input.params = {};
@@ -120,6 +122,7 @@ export class App extends Base.with(Config, Database, Emitter, Log, RestApi, Driv
                 id: device.db_device.id,
               }).then((data) => {
                 if (input.params.capabilities) {
+                  this.log(`${input.ident}`, 'sub-devices-queue', 'update-capabilities', input.params);
                   device.updateCapabilities(input.params.capabilities);
 
                   let that = this;
@@ -141,6 +144,7 @@ export class App extends Base.with(Config, Database, Emitter, Log, RestApi, Driv
               const params = Object.assign({icon}, input.params);
               const driver_id = this.drivers[input.model].db_driver.id;
               this.createSubDevice(input.class_name, input.ident, input.name, driver_id, params, input.zone_id, input.parent, input.user_id).then((db_device: any) => {
+                this.log(`${input.ident}`, 'sub-devices-queue', 'create-sub-device', db_device);
                 //TODO: Лучше не трогать, иначе отваливается добавление капабилити
                 this.loadDevices();
                 this.registerDevices();
