@@ -148,6 +148,17 @@ export class App extends Base.with(Config, Database, Emitter, Log, RestApi, Driv
                 //TODO: Лучше не трогать, иначе отваливается добавление капабилити
                 this.loadDevices();
                 this.registerDevices();
+
+                this.checkSubDevice(
+                  input.class_name,
+                  input.ident,
+                  input.model,
+                  input.name,
+                  params,
+                  input.zone_id,
+                  input.parent
+                );
+
                 callback(null, db_device);
               }).catch(error => {
                 callback(error, null);
