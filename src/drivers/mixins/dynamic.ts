@@ -130,7 +130,7 @@ export const Dynamic = toMixin(parent => class Dynamic extends parent {
   }
 
   updateConfig() {
-    super.updateConfig();
+    // super.updateConfig();
     if (!this.pluginSubDevice && this.device && (!this.getParam('external_driver') || this.getParam('external_driver_ssh_host'))) {
       this.killTimeout = setTimeout(() => {
         this.app.log(`${this.ident} updateConfig`);

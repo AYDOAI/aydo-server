@@ -336,4 +336,12 @@ export const BaseDriver = toExtendable(class BaseDriver extends Base.with(Queue,
       this.error(error);
     });
   }
+
+  reloadSettings() {
+    this.app.getItems(DbTables.DeviceSettings, { device_id: this.id }).then((settings) => {
+      this.db_device.device_settings = settings;
+    }).catch(error => {
+      this.error(error);
+    });
+  }
 });
