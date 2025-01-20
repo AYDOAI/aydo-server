@@ -98,7 +98,7 @@ mkdir -p /srv/config
 mkdir -p /srv/code/server
 mkdir -p /srv/plugins
 
-# zigbee2mqtt plugin ------------------------------------------------------------------------------
+# Zigbee2mqtt plugin ------------------------------------------------------------------------------
 
 echo "Cloning zigbee2mqtt plugin"
 mkdir -p /srv/code/zigbee2mqtt
@@ -120,7 +120,7 @@ else
   cp ./src/*.json /srv/plugins
 fi
 
-# mediamtx plugin ---------------------------------------------------------------------------------
+# Mediamtx plugin ---------------------------------------------------------------------------------
 
 echo "Cloning mediamtx plugin"
 mkdir -p /srv/code/mediamtx
@@ -137,12 +137,12 @@ CODE=$?
 if [ $CODE != 0 ]; then
   echo "Build error $CODE"
   exit $CODE
-else
+elsessh cl
   cp ./dist/*.js /srv/plugins
   cp ./src/*.json /srv/plugins
 fi
 
-# mediamtx plugin ---------------------------------------------------------------------------------
+# Myst plugin -------------------------------------------------------------------------------------
 
 echo "Cloning myst plugin"
 mkdir -p /srv/code/myst
@@ -164,7 +164,7 @@ else
   cp ./src/*.json /srv/plugins
 fi
 
-# core --------------------------------------------------------------------------------------------
+# AYDO core ---------------------------------------------------------------------------------------
 
 echo "Cloning AYDO core"
 git clone --depth 1 --branch AYDO-main https://github.com/AYDOAI/aydo-server.git /srv/code/server
