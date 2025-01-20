@@ -140,6 +140,7 @@ if [ $CODE != 0 ]; then
 else
   cp ./dist/*.js /srv/plugins
   cp ./src/*.json /srv/plugins
+  cp ./config/config.json /srv/config/mediamtx.json
 fi
 
 # Myst plugin -------------------------------------------------------------------------------------
