@@ -137,7 +137,7 @@ CODE=$?
 if [ $CODE != 0 ]; then
   echo "Build error $CODE"
   exit $CODE
-elsessh cl
+else
   cp ./dist/*.js /srv/plugins
   cp ./src/*.json /srv/plugins
 fi
