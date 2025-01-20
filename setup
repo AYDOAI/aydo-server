@@ -98,15 +98,13 @@ mkdir -p /srv/config
 mkdir -p /srv/code/server
 mkdir -p /srv/plugins
 
+# zigbee2mqtt plugin ------------------------------------------------------------------------------
+
 echo "Cloning zigbee2mqtt plugin"
 mkdir -p /srv/code/zigbee2mqtt
 git clone --depth 1 --branch AYDO-main https://github.com/AYDOAI/aydo-plugin-zigbee2mqtt.git /srv/code/zigbee2mqtt
 
 cd /srv/code/zigbee2mqtt
-
-# echo "Copy zigbee2mqtt configuration file"
-# cp ./zigbee2mqtt.configuration.yaml /srv/zigbee2mqtt/data/configuration.example.yaml
-# cp ./zigbee2mqtt.configuration.yaml /srv/zigbee2mqtt/data/configuration.yaml
 
 echo "Installing zigbee2mqtt plugin dependencies"
 npm install || exit 1
@@ -121,6 +119,52 @@ else
   cp ./dist/*.js /srv/plugins
   cp ./src/*.json /srv/plugins
 fi
+
+# mediamtx plugin ---------------------------------------------------------------------------------
+
+echo "Cloning mediamtx plugin"
+mkdir -p /srv/code/mediamtx
+git clone --depth 1 --branch AYDO-main https://github.com/AYDOAI/aydo-plugin-mediamtx.git /srv/code/mediamtx
+
+cd /srv/code/mediamtx
+
+echo "Installing mediamtx plugin dependencies"
+npm install || exit 1
+echo "Compiling mediamtx plugin"
+npm run build || exit 1
+
+CODE=$?
+if [ $CODE != 0 ]; then
+  echo "Build error $CODE"
+  exit $CODE
+else
+  cp ./dist/*.js /srv/plugins
+  cp ./src/*.json /srv/plugins
+fi
+
+# mediamtx plugin ---------------------------------------------------------------------------------
+
+echo "Cloning myst plugin"
+mkdir -p /srv/code/myst
+git clone --depth 1 --branch AYDO-main https://github.com/AYDOAI/aydo-plugin-myst.git /srv/code/myst
+
+cd /srv/code/myst
+
+echo "Installing myst plugin dependencies"
+npm install || exit 1
+echo "Compiling myst plugin"
+npm run build || exit 1
+
+CODE=$?
+if [ $CODE != 0 ]; then
+  echo "Build error $CODE"
+  exit $CODE
+else
+  cp ./dist/*.js /srv/plugins
+  cp ./src/*.json /srv/plugins
+fi
+
+# core --------------------------------------------------------------------------------------------
 
 echo "Cloning AYDO core"
 git clone --depth 1 --branch AYDO-main https://github.com/AYDOAI/aydo-server.git /srv/code/server
