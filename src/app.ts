@@ -453,7 +453,7 @@ export class App extends Base.with(Config, Database, Emitter, Log, RestApi, Driv
           this.publishEx(EventTypes.ZoneCreate, { id: `${EventTypes.ZoneCreate}->${data.id}` }, {
             id: data.id
           }).then(() => {
-            this.registerZones();
+            this.registerZones(true);
             resolve(data);
           });
         }).catch(error => {
@@ -476,10 +476,28 @@ export class App extends Base.with(Config, Database, Emitter, Log, RestApi, Driv
         this.updateItem(DbTables.Devices, body, {
           id: device.id,
         }).then(() => {
+          if (Object.keys(data.settings).length > 0) {
+            if (Object.keys(data.settings).length > 0) {
+              const updatePromises = Object.keys(data.settings).map((key) => {
+                return this.updateItem(DbTables.DeviceSettings, { value: data.settings[key] }, { device_id: device.id, key });
+              });
+
+              Promise.all(updatePromises).then(() => {
+                device.reloadSettings();
+                device.updateConfig();
+                this.loadDevices();
+                this.registerDevices();
+                resolve({ message: 'Device updated' });
+              }).catch((error) => {
+                console.error('Error updating settings:', error);
+              });
+            }
+          } else {
             this.updateDeviceParameters(data.device_ident, body).then(() => {
               this.registerDevices(true);
               resolve({ message: 'Device updated' });
             });
+          }
           }).catch(error => {
             console.log(error);
             reject(error);
