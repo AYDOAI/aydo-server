@@ -243,7 +243,7 @@ export const Cloud = toMixin(base => class Cloud extends base {
         ident: device.ident,
         identifier: device.identifier,
         driverId: device.db_device.driver_id,
-        zoneId: device.db_device.zone_id,
+        zoneId: device.zone_id,
         userId: device.db_device.user_id,
         parentId: device.db_device.parent_id,
         disabled: device.db_device.disabled,
