@@ -453,7 +453,7 @@ export class App extends Base.with(Config, Database, Emitter, Log, RestApi, Driv
           this.publishEx(EventTypes.ZoneCreate, { id: `${EventTypes.ZoneCreate}->${data.id}` }, {
             id: data.id
           }).then(() => {
-            this.registerZones();
+            this.registerZones(true);
             resolve(data);
           });
         }).catch(error => {
