@@ -4,4 +4,5 @@ database.sqlite
 /config
 dist/
 .vscode/
-.idea
+.idea/
+.aydo/
