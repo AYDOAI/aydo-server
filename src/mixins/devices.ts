@@ -261,6 +261,8 @@ export const Devices = toMixin(base => class Devices extends base {
           Object.keys(params).forEach((key) => {
             if (this.devices[ident].hasOwnProperty(key)) {
               this.devices[ident][key] = params[key];
+            } else if (this.devices[ident].db_device.hasOwnProperty(key)) {
+              this.devices[ident].db_device[key] = params[key];
             }
           });
           resolve(`Device ${ident} parameters updated`);
