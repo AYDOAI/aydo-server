@@ -18,6 +18,7 @@ import {Emitter} from './mixins/emitter';
 import {IPC} from './mixins/ipc';
 import {Log} from './mixins/log';
 import {RestApi} from './mixins/rest-api';
+import {IUpdateDevice} from './models/update-device.interface';
 
 const mdns = require('mdns');
 
@@ -62,6 +63,8 @@ export class App extends Base.with(Config, Database, Emitter, Log, RestApi, Driv
 
     this.subDevicesQueue = new BetterQueue((input, callback) => {
       try {
+        this.log(`${input.ident}`, 'sub-devices-queue', input.params);
+
         input.ident = getDeviceIdent(input.ident);
         if (!input.params) {
           input.params = {};
@@ -119,7 +122,14 @@ export class App extends Base.with(Config, Database, Emitter, Log, RestApi, Driv
                 id: device.db_device.id,
               }).then((data) => {
                 if (input.params.capabilities) {
+                  this.log(`${input.ident}`, 'sub-devices-queue', 'update-capabilities', input.params);
                   device.updateCapabilities(input.params.capabilities);
+
+                  let that = this;
+                  setTimeout(function () {
+                    that.devicesSend = false;
+                    that.publishEx(EventTypes.DeviceDone, {id: EventTypes.DeviceDone});
+                  }, 5000);
                 }
                 callback(null, data);
               }).catch((error) => {
@@ -130,23 +140,26 @@ export class App extends Base.with(Config, Database, Emitter, Log, RestApi, Driv
               if (!input.name) {
                 input.name = this.drivers[input.model].driver_name;
               }
+
               const params = Object.assign({icon}, input.params);
               const driver_id = this.drivers[input.model].db_driver.id;
-              this.createSubDevice(input.class_name, input.ident, input.name, driver_id, params, input.zone_id, input.parent, input.user_id).then((device: any) => {
-                // let params;
-                // try {
-                //   params = JSON.parse(device.params);
-                // } catch (e) {
-                //   this.error(e)
-                // }
-                // this.app.ws.sendToAll('notify', {
-                //   system: true,
-                //   type: 'device-create',
-                //   device: {id: device.id, name: device.name, icon: params ? params.icon : null, zone_id: device.zone_id}
-                // });
+              this.createSubDevice(input.class_name, input.ident, input.name, driver_id, params, input.zone_id, input.parent, input.user_id).then((db_device: any) => {
+                this.log(`${input.ident}`, 'sub-devices-queue', 'create-sub-device', db_device);
+                //TODO: Лучше не трогать, иначе отваливается добавление капабилити
                 this.loadDevices();
                 this.registerDevices();
-                callback(null, device);
+
+                this.checkSubDevice(
+                  input.class_name,
+                  input.ident,
+                  input.model,
+                  input.name,
+                  params,
+                  input.zone_id,
+                  input.parent
+                );
+
+                callback(null, db_device);
               }).catch(error => {
                 callback(error, null);
               });
@@ -194,6 +207,17 @@ export class App extends Base.with(Config, Database, Emitter, Log, RestApi, Driv
     return result;
   }
 
+  findDriverById(id) {
+    let result = null;
+    const drivers = this.drivers;
+    Object.keys(drivers).forEach(key => {
+      if (drivers[key].driver_id === id) {
+        result = drivers[key];
+      }
+    });
+    return result;
+  }
+
   findDeviceById(id) {
     let result = null;
     Object.keys(this.devices).forEach(key => {
@@ -205,6 +229,16 @@ export class App extends Base.with(Config, Database, Emitter, Log, RestApi, Driv
   }
 
   findDeviceByIdent(ident) {
+    let result = null;
+    Object.keys(this.devices).forEach(key => {
+      if (this.devices[key].ident === ident) {
+        result = this.devices[key];
+      }
+    });
+    return result;
+  }
+
+  getDeviceByIdent(ident) {
     let result = null;
     Object.keys(this.devices).forEach(key => {
       if (this.devices[key].ident === ident) {
@@ -244,6 +278,7 @@ export class App extends Base.with(Config, Database, Emitter, Log, RestApi, Driv
         class_name, ident, model, name, params, zone_id, parent
       }, (error, result) => {
         if (error) {
+          this.log(`${ident}`, 'drivers', 'check-sub-device-error', error);
           reject(error);
         } else {
           this.publishEx(EventTypes.DeviceCheckSubDevice, {id: `${EventTypes.DeviceCheckSubDevice}->${ident}`}, result.id, {
@@ -311,6 +346,11 @@ export class App extends Base.with(Config, Database, Emitter, Log, RestApi, Driv
   newDevice(user_id: number, body: any) {
     return new Promise((resolve, reject) => {
       const driver = this.findDriverByClassName(body.class_name);
+      const isValid = this.isNewDeviceValid(body);
+      if (!isValid) {
+        reject({message: 'Device with such settings is already linked to your account'});
+        return;
+      }
       try {
         if (driver && driver.validateParams(body.params)) {
           body.driver_id = driver.db_driver.id;
@@ -325,8 +365,7 @@ export class App extends Base.with(Config, Database, Emitter, Log, RestApi, Driv
                 driver_id: body.driver_id,
               }).then(() => {
                 this.devicesCache = null;
-                this.registerDevices();
-                this.loadDevices();
+                this.loadDevices(true).then(() => this.registerDevices(true));
                 // this.restart();
                 resolve(data);
               });
@@ -343,6 +382,130 @@ export class App extends Base.with(Config, Database, Emitter, Log, RestApi, Driv
         reject(e);
       }
     })
+  }
+
+  isNewDeviceValid(data: any): boolean {
+    if (data.driverId && data.settings) {
+      const devices = this.buildDevicesRO();
+      const devicesByDriverId = devices.filter(device => device.driverId === data.driverId);
+      if (devicesByDriverId && devicesByDriverId.length) {
+        for (const device of devicesByDriverId) {
+          if (device.settings && device.settings.length > 0) {
+            const uniqueSettings = device.settings.filter(setting => setting.unique);
+            if (uniqueSettings.length > 0) {
+              const allMatch = uniqueSettings.every(us => us.value === data.settings[us.key]);
+              if (allMatch) {
+                return false
+              }
+            }
+          }
+        }
+      }
+    }
+
+    return true;
+  }
+
+  deleteDevice(device_ident: string) {
+    return new Promise((resolve, reject) => {
+      const device = this.getDeviceByIdent(device_ident);
+      if (device && device.id) {
+        this.deleteItem(DbTables.Devices, { id: device.id }).then((updatedCount) => {
+          if (updatedCount > 0) {
+            device.deleteDeviceEx();
+            this.removeDevice(device_ident).then(() => {
+              this.registerDevices(true);
+              resolve({ message: 'Device and its settings successfully deleted.' });
+            });
+          } else {
+            reject({ message: 'An error occurred while deleting the device' });
+            return;
+          }
+        }).catch(error => {
+          console.log(error);
+          reject(error);
+        });
+      } else {
+        reject({ message: 'Device not found' });
+      }
+    });
+  }
+
+  deleteDeviceSettings(device_id: number) {
+    return new Promise((resolve, reject) => {
+      const where = { device_id };
+      this.deleteItem(DbTables.DeviceSettings, where)
+          .then((data) => {
+            resolve(data);
+          })
+          .catch(error => {
+            reject(error);
+          });
+    });
+  }
+
+  newZone(user_id: number, body: any) {
+    return new Promise((resolve, reject) => {
+      const driver = this.findDriverByClassName(body.class_name);
+      try {
+        // body.user_id = user_id;
+        this.createItem(DbTables.Zones, body).then((data) => {
+          this.publishEx(EventTypes.ZoneCreate, { id: `${EventTypes.ZoneCreate}->${data.id}` }, {
+            id: data.id
+          }).then(() => {
+            this.registerZones(true);
+            resolve(data);
+          });
+        }).catch(error => {
+          reject(error);
+        })
+      } catch (e) {
+        reject(e);
+      }
+    });
+  }
+
+  updateDevice(data: IUpdateDevice) {
+    return new Promise((resolve, reject) => {
+      const device = this.getDeviceByIdent(data.device_ident);
+      if (device && device.id) {
+        const body = {
+          name: data.device_name,
+          zone_id: data.zone_id,
+        }
+        this.updateItem(DbTables.Devices, body, {
+          id: device.id,
+        }).then(() => {
+          if (Object.keys(data.settings).length > 0) {
+            if (Object.keys(data.settings).length > 0) {
+              const updatePromises = Object.keys(data.settings).map((key) => {
+                return this.updateItem(DbTables.DeviceSettings, { value: data.settings[key] }, { device_id: device.id, key });
+              });
+
+              Promise.all(updatePromises).then(() => {
+                device.reloadSettings();
+                device.updateConfig();
+                this.loadDevices();
+                this.registerDevices();
+                resolve({ message: 'Device updated' });
+              }).catch((error) => {
+                console.error('Error updating settings:', error);
+              });
+            }
+          } else {
+            this.updateDeviceParameters(data.device_ident, body).then(() => {
+              this.registerDevices(true);
+              resolve({ message: 'Device updated' });
+            });
+          }
+          }).catch(error => {
+            console.log(error);
+            reject(error);
+          });
+      } else {
+        reject({ message: 'Device not found' });
+      }
+    });
   }
 
   restart() {
@@ -387,5 +550,4 @@ export class App extends Base.with(Config, Database, Emitter, Log, RestApi, Driv
       }
     });
   }
-
 }

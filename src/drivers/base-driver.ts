@@ -305,6 +305,7 @@ export const BaseDriver = toExtendable(class BaseDriver extends Base.with(Queue,
   updateCapabilities(capabilities) {
     capabilities.forEach(capability => {
       const cap = this.db_device.device_capabilities.find(item => item.ident === capability.ident && ((!capability.index && item.index === '') || item.index == capability.index));
+      // const cap = this.db_device.device_capabilities.find(item => item.ident === capability.ident && item.device_id === this.db_device.id);
       if (!cap) {
         capability.device_id = this.db_device.id;
         capability.index = capability.index ? capability.index : '';
@@ -315,12 +316,32 @@ export const BaseDriver = toExtendable(class BaseDriver extends Base.with(Queue,
         capability.disabled = capability.disabled ? capability.disabled : false;
         capability.options = JSON.stringify(capability.options ? capability.options : {});
         capability.params = JSON.stringify(capability.params ? capability.params : {});
-        this.app.createItem(DbTables.DeviceCapabilities, capability).then(() => {
+
+        this.app.log('create-device-capability', capability);
+        this.app.createItem(DbTables.DeviceCapabilities, capability).then((row) => {
+          this.reloadCapabilities();
         }).catch(error => {
           this.error(error);
         });
       }
-    })
+    });
   }
 
+  reloadCapabilities() {
+    let options = {};
+    options['device_id'] = this.db_device.id;
+    this.app.getItems(DbTables.DeviceCapabilities, options).then((capabilities) => {
+      this.db_device.device_capabilities = capabilities;
+    }).catch(error => {
+      this.error(error);
+    });
+  }
+
+  reloadSettings() {
+    this.app.getItems(DbTables.DeviceSettings, { device_id: this.id }).then((settings) => {
+      this.db_device.device_settings = settings;
+    }).catch(error => {
+      this.error(error);
+    });
+  }
 });

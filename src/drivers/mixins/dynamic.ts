@@ -130,7 +130,7 @@ export const Dynamic = toMixin(parent => class Dynamic extends parent {
   }
 
   updateConfig() {
-    super.updateConfig();
+    // super.updateConfig();
     if (!this.pluginSubDevice && this.device && (!this.getParam('external_driver') || this.getParam('external_driver_ssh_host'))) {
       this.killTimeout = setTimeout(() => {
         this.app.log(`${this.ident} updateConfig`);
@@ -162,7 +162,7 @@ export const Dynamic = toMixin(parent => class Dynamic extends parent {
           environment: this.app.config.environment,
           internal_port: this.app.config.port,
           internal_ip: this.app.internal_ip,
-          cloud: this.app.config.cloud ? !!this.app.config.cloud.cloud : false,
+          cloud: this.app.config.cloud ? this.app.config.cloud : false,
           ident: this.ident,
           params: this.getParams(),
           log_path: this.app.config.log.path,
@@ -190,7 +190,7 @@ export const Dynamic = toMixin(parent => class Dynamic extends parent {
           environment: this.app.config.environment,
           internal_port: this.app.config.port,
           internal_ip: this.app.internal_ip,
-          cloud: this.app.config.cloud ? !!this.app.config.cloud.cloud : false,
+          cloud: this.app.config.cloud ? this.app.config.cloud : false,
           ident: this.ident,
           params: this.getParams(),
           log_path: this.app.config.log.path,
@@ -319,6 +319,13 @@ export const Dynamic = toMixin(parent => class Dynamic extends parent {
     // } else {
       request();
     // }
+  }
+
+  deleteDeviceEx() {
+    this.app.request(`driver-${this.id}`, 'delete-device', {
+      identifier: this.identifier
+    }).then(() => console.log(`Device id ${this.id} identifier ${this.identifier} successfully deleted`))
+        .catch((error) => console.log(error));
   }
 
 });

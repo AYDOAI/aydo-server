@@ -14,7 +14,7 @@ async function up({context: queryInterface}) {
     },
     "user_id": {
       "type": Sequelize.INTEGER,
-      "allowNull": false,
+      "allowNull": true,
       "references": {
         "model": {
           "tableName": "users",
@@ -22,6 +22,14 @@ async function up({context: queryInterface}) {
         },
         "key": "id"
       },
+    },
+    "location": {
+      "type": Sequelize.STRING,
+      "allowNull": true
+    },
+    "is_indoor": {
+      "type": Sequelize.BOOLEAN,
+      "allowNull": false
     },
     "created_at": {
       "type": Sequelize.DATE,

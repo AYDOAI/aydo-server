@@ -258,6 +258,28 @@ export const Database = toMixin(base => class Database extends base {
     });
   }
 
+  deleteItem(table: DbTables, where: object): Promise<number> {
+    return new Promise((resolve, reject) => {
+      this.models[table].update({ deleted_at: new Date() }, { where })
+          .then(([updatedCount]) => {
+            if (updatedCount === 0) {
+              console.log('Item not found')
+            }
+            this.database[table].items = this.database[table].items.map(item => {
+              if (Object.keys(where).every(key => item[key] === where[key])) {
+                return { ...item, deleted_at: new Date() };
+              }
+              return item;
+            });
+            resolve(updatedCount);
+          })
+          .catch(error => {
+            reject(error);
+          });
+    });
+  }
+
+
   updateFields(row, fields) {
     Object.keys(fields).forEach(itemKey => {
       row[itemKey] = fields[itemKey];
