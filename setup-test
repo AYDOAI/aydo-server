@@ -1,0 +1,212 @@
+#!/bin/bash
+OS=$(uname -s)
+if [ "$OS" == "Linux" ]; then
+OS="linux"
+fi
+if [ "$OS" == "Darwin" ]; then
+OS="darwin"
+fi
+PLATFORM=$(uname -m)
+PLATFORM2="$PLATFORM"
+if [ "$PLATFORM" == "x86_64" ]; then
+PLATFORM="x64"
+PLATFORM2="x64"
+fi
+if [ "$PLATFORM" == "i686" ]; then
+PLATFORM="x86"
+PLATFORM2="x86"
+fi
+if [ "$PLATFORM" == "aarch64" ]; then
+PLATFORM="arm64"
+PLATFORM2="arm64"
+fi
+if [ "$PLATFORM" == "armv7l" ]; then
+PLATFORM2="armv7"
+fi
+if [ "$PLATFORM" == "armv6l" ]; then
+PLATFORM2="armv6"
+fi
+echo "$OS-$PLATFORM ($PLATFORM2) detected"
+NODE=v18.20.0
+echo "Downloading node https://nodejs.org/dist/${NODE}/node-${NODE}-${OS}-${PLATFORM}.tar.xz"
+if [ "$OS" == "darwin" ]; then
+curl --silent --fail https://nodejs.org/dist/${NODE}/node-${NODE}-${OS}-${PLATFORM}.tar.xz --output "node-$NODE.tar.xz"
+else
+wget -q https://nodejs.org/dist/${NODE}/node-${NODE}-${OS}-${PLATFORM}.tar.xz -O "node-$NODE.tar.xz"
+fi
+if [[ $? -ne 0 ]]; then
+echo "***** WARNING! Node not found!"
+else
+echo "Extracting node"
+tar -xf node-${NODE}.tar.xz
+rm node-${NODE}.tar.xz
+if [ -d "node-${NODE}-${OS}-${PLATFORM}" ]; then
+echo "Installing node"
+cp -R node-${NODE}-${OS}-${PLATFORM}/* /usr/local/
+echo "Deleting temp files"
+rm -r -f node-${NODE}-${OS}-${PLATFORM}
+else
+echo "***** WARNING! Node not found!"
+fi
+fi
+if [ "$OS" == "linux" ]; then
+echo "Updating your system"
+apt-get update > /dev/null
+echo "Installing dependencies"
+DEBIAN_FRONTEND="noninteractive" apt-get -qq -y install tzdata
+apt-get install -qq -y build-essential libavahi-compat-libdnssd-dev
+DEBIAN_FRONTEND="noninteractive" apt-get -qq -y install samba samba-client smbclient
+apt-get install -qq -y zip iw libtool libudev-dev libnss-mdns dnsmasq hostapd autoconf automake g++ avahi-daemon avahi-discover mosquitto sqlite3 ntp
+apt-get install -qq -y git
+apt-get install -qq -y python3
+apt-get install -qq -y ffmpeg
+fi
+
+mkdir -p /srv/
+
+# echo "Cloning zigbee2mqtt"
+# mkdir -p /srv/zigbee2mqtt
+# git clone --depth 1 --branch 1.41.0 https://github.com/Koenkk/zigbee2mqtt.git /srv/zigbee2mqtt
+# cd /srv/zigbee2mqtt
+# echo "Installing zigbee2mqtt dependencies"
+# npm ci
+# echo "Compiling zigbee2mqtt"
+# npm run build
+
+# if [ "$OS" == "linux" ]; then
+# echo "Installing zigbee2mqtt service"
+# echo "[Unit]
+# Description=zigbee2mqtt
+# After=network.target
+# [Service]
+# ExecStart=/usr/local/bin/node /srv/zigbee2mqtt/index.js
+# WorkingDirectory=/srv/zigbee2mqtt
+# StandardOutput=inherit
+# StandardError=inherit
+# Restart=always
+# User=root
+# [Install]
+# WantedBy=multi-user.target
+# " > /etc/systemd/system/zigbee2mqtt.service
+# systemctl daemon-reload
+# # systemctl start zigbee2mqtt
+# systemctl enable zigbee2mqtt.service
+# fi
+
+mkdir -p /srv/code
+mkdir -p /srv/config
+mkdir -p /srv/code/server
+mkdir -p /srv/plugins
+
+# Zigbee2mqtt plugin ------------------------------------------------------------------------------
+
+echo "Cloning zigbee2mqtt plugin"
+mkdir -p /srv/code/zigbee2mqtt
+git clone --depth 1 --branch AYDO-test https://github.com/AYDOAI/aydo-plugin-zigbee2mqtt.git /srv/code/zigbee2mqtt
+
+cd /srv/code/zigbee2mqtt
+
+echo "Installing zigbee2mqtt plugin dependencies"
+npm install || exit 1
+echo "Compiling zigbee2mqtt plugin"
+npm run build || exit 1
+
+CODE=$?
+if [ $CODE != 0 ]; then
+  echo "Build error $CODE"
+  exit $CODE
+else
+  cp ./dist/*.js /srv/plugins
+  cp ./src/*.json /srv/plugins
+fi
+
+# Mediamtx plugin ---------------------------------------------------------------------------------
+
+echo "Cloning mediamtx plugin"
+mkdir -p /srv/code/mediamtx
+git clone --depth 1 --branch AYDO-test https://github.com/AYDOAI/aydo-plugin-mediamtx.git /srv/code/mediamtx
+
+cd /srv/code/mediamtx
+
+echo "Installing mediamtx plugin dependencies"
+npm install || exit 1
+echo "Compiling mediamtx plugin"
+npm run build || exit 1
+
+CODE=$?
+if [ $CODE != 0 ]; then
+  echo "Build error $CODE"
+  exit $CODE
+else
+  cp ./dist/*.js /srv/plugins
+  cp ./src/*.json /srv/plugins
+  cp ./config/config.json /srv/config/mediamtx.json
+fi
+
+# Myst plugin -------------------------------------------------------------------------------------
+
+echo "Cloning myst plugin"
+mkdir -p /srv/code/myst
+git clone --depth 1 --branch AYDO-test https://github.com/AYDOAI/aydo-plugin-myst.git /srv/code/myst
+
+cd /srv/code/myst
+
+echo "Installing myst plugin dependencies"
+npm install || exit 1
+echo "Compiling myst plugin"
+npm run build || exit 1
+
+CODE=$?
+if [ $CODE != 0 ]; then
+  echo "Build error $CODE"
+  exit $CODE
+else
+  cp ./dist/*.js /srv/plugins
+  cp ./src/*.json /srv/plugins
+fi
+
+# AYDO core ---------------------------------------------------------------------------------------
+
+echo "Cloning AYDO core"
+git clone --depth 1 --branch AYDO-test https://github.com/AYDOAI/aydo-server.git /srv/code/server
+cd /srv/code/server
+
+echo "Installing AYDO core dependencies"
+npm install || exit 1
+npm install zigbee-herdsman || exit 1
+npm install zigbee-herdsman-converters || exit 1
+echo "Compiling AYDO core"
+npm run webpack || exit 1
+
+CODE=$?
+if [ $CODE != 0 ]; then
+  echo "Build error $CODE"
+  exit $CODE
+else
+  cp ./server.js /srv/
+  cp ./package.json /srv/
+  cp -R ./node_modules/ /srv
+  cp -R ./migrations/ /srv
+fi
+
+if [ "$OS" == "linux" ]; then
+echo "Installing AYDO service"
+echo "[Unit]
+Description=aydo
+After=network.target
+[Service]
+ExecStart=/usr/local/bin/node /srv/server.js
+WorkingDirectory=/srv
+StandardOutput=inherit
+StandardError=inherit
+Restart=always
+User=root
+[Install]
+WantedBy=multi-user.target
+" > /etc/systemd/system/aydo.service
+systemctl daemon-reload
+systemctl start aydo
+systemctl enable aydo.service
+fi
+
+cd /srv
