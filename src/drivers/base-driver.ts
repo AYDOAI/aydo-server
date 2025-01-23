@@ -230,6 +230,12 @@ export const BaseDriver = toExtendable(class BaseDriver extends Base.with(Queue,
     return false;
   }
 
+  getParam(param) {
+    return this.db_device.device_settings.find(item => {
+      item.key = param;
+    });
+  }
+
   getParams() {
     const result = {};
     this.db_device.device_settings.forEach(item => {

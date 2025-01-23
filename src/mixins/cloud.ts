@@ -243,13 +243,16 @@ export const Cloud = toMixin(base => class Cloud extends base {
         ident: device.ident,
         identifier: device.identifier,
         driverId: device.db_device.driver_id,
-        zoneId: device.zone_id,
+        zoneId: device.db_device.zone_id,
         userId: device.db_device.user_id,
         parentId: device.db_device.parent_id,
         disabled: device.db_device.disabled,
         capabilities: [],
         settings: []
       };
+
+      console.log(opts);
+      console.log(JSON.stringify(opts));
 
       device.db_device.device_capabilities.forEach(cap => {
         opts.capabilities.push({
@@ -303,6 +306,7 @@ export const Cloud = toMixin(base => class Cloud extends base {
       this.getAllItems(DbTables.Zones).then(db_zones => {
         db_zones.forEach(zone => {
           zones.push({
+            id: zone.id,
             name: zone.name,
             location: zone.location,
             is_indoor: zone.is_indoor,
