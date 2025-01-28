@@ -14,10 +14,10 @@
   "author": "AYDO Team",
   "license": "ISC",
   "dependencies": {
+    "bonjour": "^3.5.0",
     "cors": "^2.8.5",
     "express": "^4.18.2",
     "jsonwebtoken": "^9.0.2",
-    "mdns": "^2.7.2",
     "mqtt": "4.3.7",
     "node-eta": "^0.9.0",
     "node-ipc": "^11.1.0",
