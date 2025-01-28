@@ -9,7 +9,7 @@ export class RequireEx {
   parent: any;
   queue: any;
   modules: any = {
-    'mdns': {version: '^2.7.2', required: true},
+    'bonjour': {version: '^3.5.0', required: true},
     'sequelize': {version: '^6.36.0', required: true},
     'sqlite3': {version: '^5.1.7', required: true},
   };

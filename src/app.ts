@@ -20,7 +20,7 @@ import {Log} from './mixins/log';
 import {RestApi} from './mixins/rest-api';
 import {IUpdateDevice} from './models/update-device.interface';
 
-const mdns = require('mdns');
+const bonjour = require('bonjour')();
 
 const Base = toExtendable(class BaseClass {
 
@@ -187,9 +187,13 @@ export class App extends Base.with(Config, Database, Emitter, Log, RestApi, Driv
   }
 
   mdnsStart() {
-    this.bonjour = mdns.createAdvertisement(mdns.tcp('http'), this.config.port, {name: this.identifier});
+    this.bonjour = bonjour.publish({
+      type: 'http',
+      port: this.config.port,
+      name: this.identifier,
+    });
+
     console.log('mdnsStart', this.bonjour);
-    this.bonjour.start();
   }
 
   terminate() {
