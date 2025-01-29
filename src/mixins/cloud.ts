@@ -181,12 +181,54 @@ export const Cloud = toMixin(base => class Cloud extends base {
     }
   }
 
-  registerDrivers(force = false) {
-    clearTimeout(this.driversUpdateTimeout)
-    const registerDrivers = () => {
+  // registerDrivers(force = false) {
+  //   clearTimeout(this.driversUpdateTimeout)
+  //   const registerDrivers = () => {
+  //     const drivers = [];
+  //     Object.keys(this.drivers).forEach(class_name => {
+  //       const driver = this.drivers[class_name];
+  //       const opts = {
+  //         className: class_name,
+  //         parentClassName: driver.parent_class_name,
+  //         icon: driver.icon,
+  //         name: driver.driver_name,
+  //         driverId: driver.driver_id,
+  //         type: driver.driver_type,
+  //         settings: driver.driver_settings
+  //       };
+
+  //       if (class_name == 'zigbee2mqtt') {
+  //         (async () => {
+  //           let setting = opts.settings.find(i => i.key == 'port');
+  //           setting.items = await this.searchSerialDevices();
+  //         })();
+  //       }
+
+  //       drivers.push(opts)
+  //     })
+
+  //     console.log('register_drivers', drivers);
+  //     this.ws.emit('register_drivers', drivers);
+  //     this.driversSend = true;
+  //   }
+  //   if (force) {
+  //     registerDrivers();
+  //   } else {
+  //     this.driversUpdateTimeout = setTimeout(() => {
+  //       registerDrivers();
+  //     }, 5000);
+  //   }
+  // }
+
+  async registerDrivers(force = false) {
+    clearTimeout(this.driversUpdateTimeout);
+
+    const registerDrivers = async () => {
       const drivers = [];
-      Object.keys(this.drivers).forEach(class_name => {
+
+      for (const class_name of Object.keys(this.drivers)) {
         const driver = this.drivers[class_name];
+
         const opts = {
           className: class_name,
           parentClassName: driver.parent_class_name,
@@ -197,21 +239,26 @@ export const Cloud = toMixin(base => class Cloud extends base {
           settings: driver.driver_settings
         };
 
-        if (class_name == 'zigbee2mqtt') {
-          let setting = opts.settings.find(i => i.key == 'port');
-          setting.items = this.searchSerialDevices();
+        if (class_name === 'zigbee2mqtt') {
+          const setting = opts.settings.find(i => i.key === 'port');
+          if (setting) {
+            setting.items = await this.searchSerialDevices();
+          }
         }
 
-        drivers.push(opts)
-      })
+        drivers.push(opts);
+      }
+
+      console.log('register_drivers', drivers);
       this.ws.emit('register_drivers', drivers);
       this.driversSend = true;
-    }
+    };
+
     if (force) {
-      registerDrivers();
+      await registerDrivers();
     } else {
-      this.driversUpdateTimeout = setTimeout(() => {
-        registerDrivers();
+      this.driversUpdateTimeout = setTimeout(async () => {
+        await registerDrivers();
       }, 5000);
     }
   }
