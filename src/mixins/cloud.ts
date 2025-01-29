@@ -181,12 +181,54 @@ export const Cloud = toMixin(base => class Cloud extends base {
     }
   }
 
-  registerDrivers(force = false) {
-    clearTimeout(this.driversUpdateTimeout)
-    const registerDrivers = () => {
+  // registerDrivers(force = false) {
+  //   clearTimeout(this.driversUpdateTimeout)
+  //   const registerDrivers = () => {
+  //     const drivers = [];
+  //     Object.keys(this.drivers).forEach(class_name => {
+  //       const driver = this.drivers[class_name];
+  //       const opts = {
+  //         className: class_name,
+  //         parentClassName: driver.parent_class_name,
+  //         icon: driver.icon,
+  //         name: driver.driver_name,
+  //         driverId: driver.driver_id,
+  //         type: driver.driver_type,
+  //         settings: driver.driver_settings
+  //       };
+
+  //       if (class_name == 'zigbee2mqtt') {
+  //         (async () => {
+  //           let setting = opts.settings.find(i => i.key == 'port');
+  //           setting.items = await this.searchSerialDevices();
+  //         })();
+  //       }
+
+  //       drivers.push(opts)
+  //     })
+
+  //     console.log('register_drivers', drivers);
+  //     this.ws.emit('register_drivers', drivers);
+  //     this.driversSend = true;
+  //   }
+  //   if (force) {
+  //     registerDrivers();
+  //   } else {
+  //     this.driversUpdateTimeout = setTimeout(() => {
+  //       registerDrivers();
+  //     }, 5000);
+  //   }
+  // }
+
+  async registerDrivers(force = false) {
+    clearTimeout(this.driversUpdateTimeout);
+
+    const registerDrivers = async () => {
       const drivers = [];
-      Object.keys(this.drivers).forEach(class_name => {
+
+      for (const class_name of Object.keys(this.drivers)) {
         const driver = this.drivers[class_name];
+
         const opts = {
           className: class_name,
           parentClassName: driver.parent_class_name,
@@ -197,21 +239,26 @@ export const Cloud = toMixin(base => class Cloud extends base {
           settings: driver.driver_settings
         };
 
-        if (class_name == 'zigbee2mqtt') {
-          let setting = opts.settings.find(i => i.key == 'port');
-          setting.items = this.searchSerialDevices(['Zigbee', 'Dongle']);
+        if (class_name === 'zigbee2mqtt') {
+          const setting = opts.settings.find(i => i.key === 'port');
+          if (setting) {
+            setting.items = await this.searchSerialDevices();
+          }
         }
 
-        drivers.push(opts)
-      })
+        drivers.push(opts);
+      }
+
+      console.log('register_drivers', drivers);
       this.ws.emit('register_drivers', drivers);
       this.driversSend = true;
-    }
+    };
+
     if (force) {
-      registerDrivers();
+      await registerDrivers();
     } else {
-      this.driversUpdateTimeout = setTimeout(() => {
-        registerDrivers();
+      this.driversUpdateTimeout = setTimeout(async () => {
+        await registerDrivers();
       }, 5000);
     }
   }
@@ -325,55 +372,69 @@ export const Cloud = toMixin(base => class Cloud extends base {
     }
   }
 
-  searchSerialDevices(keywords: string[]) {
-    const fs = require('fs');
-    const path = require('path');
-    const directory = '/dev/serial/by-id';
+  async searchSerialDevices() {
+    const devices = [];
 
-    const devices: any = [];
+    const manufacturers = [
+      "texas instruments",
+      "ti",
+      "silicon labs",
+      "silicon labs cp210x",
+      "cp210x",
+      "cp2102",
+      "cp2104",
+      "dresden elektronik ingenieurtechnik gmbh",
+      "dresden elektronik",
+      "tube's zb coordinator",
+      "tube's zigbee",
+      "nortek",
+      "gocontrol",
+      "nortek security & control",
+      "itead",
+      "sonoff",
+      "electrolama",
+      "zzh",
+      "ikea",
+      "ikea of sweden",
+      "aeotec",
+      "aeon labs",
+      "phoscon"
+    ];
 
-    try {
-      const files = fs.readdirSync(directory);
-      files.forEach((file: any) => {
-        const linkPath = path.join(directory, file);
-        try {
-          let realPath = fs.readlinkSync(linkPath);
-          realPath = realPath.replace(/..\/../g, '/dev');
-          const formattedDeviceName = file.replace(/_/g, ' ');
-          if (keywords.some(keyword => formattedDeviceName.includes(keyword))) {
-            devices.push({
-              id: realPath,
-              title: formattedDeviceName
-            });
-          }
-        } catch (error) {
-          console.error(`Error processing symbolic link: ${linkPath}`);
-        }
-      });
-    } catch (err) {
-      console.warn(`Directory ${directory} is not accessible. Attempting to scan /dev manually...`);
+    const vendors = [
+      "0451", // Texas Instruments (TI)
+      "10c4", // Silicon Labs
+      "1cf1", // Dresden Elektronik (ConBee)
+      "1a86", // Electrolama (zzh) and other devices based on CH340
+      "0403", // FTDI (used in some Zigbee devices)
+      "0681", // Tube's Zigbee Gateways
+      "0658", // Nortek (Zigbee + Z-Wave USB sticks)
+      "0457", // ITEAD (Sonoff Zigbee USB Dongle)
+      "04d8", // IKEA TRÅDFRI USB Gateway
+      "037a", // Aeotec
+      "16c0"  // Some custom Zigbee devices
+    ]
 
-      try {
-        const devFiles = fs.readdirSync('/dev');
+    const {SerialPort} = require('serialport');
+    const ports = await SerialPort.list();
 
-        const regex = /tty(AML|USB|AMA|ACM|MFD)[0-9]*/;
-        for (const file of devFiles) {
-          if (regex.test(file)) {
-            const realPath = path.join('/dev', file);
-            devices.push({
-              id: realPath,
-              title: realPath,
-            });
-          }
-        }
-      } catch (scanError) {
-        console.error('Error scanning /dev directory:', scanError);
+    console.log('Serial devices:');
+
+    ports.forEach(port => {
+      console.log(`- port: ${port.path}, manufacturer: ${port.manufacturer}, vendorId: ${port.vendorId}`);
+
+      const manufacturer = port.manufacturer ? port.manufacturer.toLowerCase() : '';
+      const vendorId = port.vendorId ? port.vendorId.toLowerCase() : '';
+
+      if (manufacturers.includes(manufacturer) || vendors.includes(vendorId)) {
+        devices.push({
+          id: port.path,
+          title: `${port.path}, ${port.manufacturer}, ${port.vendorId}`,
+        });
       }
-    }
+    });
 
-    console.log('***Serial-Devices***');
-    console.log(devices);
-
+    console.log('Filtered devices:', devices);
     return devices;
   }
 });
