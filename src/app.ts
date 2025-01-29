@@ -242,6 +242,16 @@ export class App extends Base.with(Config, Database, Emitter, Log, RestApi, Driv
     return result;
   }
 
+  findDevicesByParentId(id) {
+    let result = [];
+    Object.keys(this.devices).forEach(key => {
+      if (this.devices[key].getParam('parent_id') === id) {
+        result.push(this.devices[key]);
+      }
+    });
+    return result;
+  }
+
   getDeviceByIdent(ident) {
     let result = null;
     Object.keys(this.devices).forEach(key => {
