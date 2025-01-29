@@ -181,45 +181,6 @@ export const Cloud = toMixin(base => class Cloud extends base {
     }
   }
 
-  // registerDrivers(force = false) {
-  //   clearTimeout(this.driversUpdateTimeout)
-  //   const registerDrivers = () => {
-  //     const drivers = [];
-  //     Object.keys(this.drivers).forEach(class_name => {
-  //       const driver = this.drivers[class_name];
-  //       const opts = {
-  //         className: class_name,
-  //         parentClassName: driver.parent_class_name,
-  //         icon: driver.icon,
-  //         name: driver.driver_name,
-  //         driverId: driver.driver_id,
-  //         type: driver.driver_type,
-  //         settings: driver.driver_settings
-  //       };
-
-  //       if (class_name == 'zigbee2mqtt') {
-  //         (async () => {
-  //           let setting = opts.settings.find(i => i.key == 'port');
-  //           setting.items = await this.searchSerialDevices();
-  //         })();
-  //       }
-
-  //       drivers.push(opts)
-  //     })
-
-  //     console.log('register_drivers', drivers);
-  //     this.ws.emit('register_drivers', drivers);
-  //     this.driversSend = true;
-  //   }
-  //   if (force) {
-  //     registerDrivers();
-  //   } else {
-  //     this.driversUpdateTimeout = setTimeout(() => {
-  //       registerDrivers();
-  //     }, 5000);
-  //   }
-  // }
-
   async registerDrivers(force = false) {
     clearTimeout(this.driversUpdateTimeout);
 
