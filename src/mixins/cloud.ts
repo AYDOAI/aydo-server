@@ -382,7 +382,7 @@ export const Cloud = toMixin(base => class Cloud extends base {
       if (manufacturers.includes(manufacturer) || vendors.includes(vendorId)) {
         devices.push({
           id: port.path,
-          title: `${port.path}, ${port.manufacturer}`,
+          title: `${port.path}, ${port.manufacturer}, ${port.vendorId}`,
         });
       }
     });
