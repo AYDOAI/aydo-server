@@ -37,7 +37,7 @@ try {
     production: {
       dialect: 'sqlite',
       database: 'main',
-      storage: './database.sqlite',
+      storage: `${configDir}/database.sqlite`,
     },
     cloud: {
       url: ''
@@ -61,6 +61,7 @@ const start = () => {
       migrations: {
         glob: 'migrations/*.js',
         resolve: ({name, path, context}) => {
+          console.log('Running migration: ', name, path);
           const migration = eval(`require(path)`);
           return {
             name,
