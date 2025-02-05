@@ -191,6 +191,7 @@ export class App extends Base.with(Config, Database, Emitter, Log, RestApi, Driv
       type: 'http',
       port: this.config.port,
       name: this.identifier,
+      host: `${this.identifier}.local`,
     });
 
     console.log('mdnsStart', this.bonjour);
