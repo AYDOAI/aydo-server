@@ -191,13 +191,29 @@ export class App extends Base.with(Config, Database, Emitter, Log, RestApi, Driv
       type: 'http',
       port: this.config.port,
       name: this.identifier,
+      host: `${this.identifier}.local`,
     });
 
     console.log('mdnsStart', this.bonjour);
   }
 
   terminate() {
-    super.terminate();
+    this.log(`The AYDO server will be terminated.`);
+
+    const keys = Object.keys(this.devices);
+    keys.sort();
+
+    keys.forEach(key => {
+      const device = this.devices[key];
+      if (device.processId) {
+        try {
+          process.kill(device.processId, 'SIGTERM'); // Send termination signal
+          this.log(`Process ${device.processId} terminated.`);
+        } catch (err) {
+          this.error(`Error terminating process: ${err.message}`);
+        }
+      }
+    });
   }
 
   findDriverByClassName(class_name) {
