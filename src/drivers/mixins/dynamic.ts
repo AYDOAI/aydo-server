@@ -33,7 +33,13 @@ export const Dynamic = toMixin(parent => class Dynamic extends parent {
       if (!this.plugin_sub_device) {
         const start = () => {
           let moduleName;
-          const options: any = {maxBuffer: 50 * 1024 * 1024};
+          
+          const options: any = {
+            maxBuffer: 50 * 1024 * 1024,
+            detached: false,
+            stdio: 'inherit'
+          };
+
           const names: any = [{
             filename: path.join(process.cwd(), `../plugins/${this.driver_module_name}/dist/src/${this.driver_module_name}.js`),
             command: 'node',
@@ -58,6 +64,8 @@ export const Dynamic = toMixin(parent => class Dynamic extends parent {
           });
 
           this.app.log(`Start: ${moduleName.command} ${JSON.stringify(moduleName.args)}${options.cwd ? `; directory: ${options.cwd}` : ''}`)
+          console.log(options);
+
           let device = spawn(moduleName.command, moduleName.args, options);
           this.processId = device.pid;
           const logModuleName = `${this.driver_module_name}-${this.id}`;
