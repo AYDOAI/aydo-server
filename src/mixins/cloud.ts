@@ -376,10 +376,20 @@ export const Cloud = toMixin(base => class Cloud extends base {
       "16c0"  // Some custom Zigbee devices
     ]
 
+    const fs = require('fs');
     const {SerialPort} = require('serialport');
     const ports = await SerialPort.list();
 
     console.log('Serial devices:');
+
+    if (fs.existsSync('/dev/ttyAML2')) {
+      console.log('Adding /dev/ttyAML2 to the list of ports');
+      ports.push({
+        path: '/dev/ttyAML2',
+        manufacturer: 'Amlogic UART',
+        vendorId: 'N/A',
+      });
+    }
 
     ports.forEach(port => {
       console.log(`- port: ${port.path}, manufacturer: ${port.manufacturer}, vendorId: ${port.vendorId}`);
