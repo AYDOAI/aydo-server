@@ -330,7 +330,9 @@ export const Dynamic = toMixin(parent => class Dynamic extends parent {
   }
 
   deleteDeviceEx() {
-    this.app.request(`driver-${this.id}`, 'delete-device', {
+    const parent = this.getParent();
+    const id = parent ? parent.id : this.id;
+    this.app.request(`driver-${id}`, 'delete-device', {
       identifier: this.identifier
     }).then(() => console.log(`Device id ${this.id} identifier ${this.identifier} successfully deleted`))
         .catch((error) => console.log(error));
