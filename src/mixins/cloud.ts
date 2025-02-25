@@ -383,12 +383,15 @@ export const Cloud = toMixin(base => class Cloud extends base {
     console.log('Serial devices:');
 
     if (fs.existsSync('/dev/ttyAML2')) {
-      console.log('Adding /dev/ttyAML2 to the list of ports');
-      ports.push({
-        path: '/dev/ttyAML2',
-        manufacturer: 'Amlogic UART',
-        vendorId: 'N/A',
-      });
+      const isAlreadyListed = ports.some(port => port.path === '/dev/ttyAML2');
+      if (!isAlreadyListed) {
+        console.log('Adding /dev/ttyAML2 to the list of ports');
+        ports.push({
+          path: '/dev/ttyAML2',
+          manufacturer: 'Amlogic UART',
+          vendorId: 'N/A',
+        });
+      }
     }
 
     ports.forEach(port => {
