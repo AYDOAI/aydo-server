@@ -171,14 +171,20 @@ export const Cloud = toMixin(base => class Cloud extends base {
 
   updateCapabilityValues(ident, identifier, values) {
     this.deviceCapabilities.push({ident, identifier, values});
-    if (!this.deviceCapabilitiesLastUpdate) {
-      this.deviceCapabilitiesLastUpdate = new Date().getTime();
-    }
-    if (new Date().getTime() - this.deviceCapabilitiesLastUpdate > 10000) {
+
+    const currentTime = new Date().getTime();
+    const updateThreshold = this.config.capability?.threshold || 10000;
+
+    if (!this.deviceCapabilitiesLastUpdate ||
+        (currentTime - this.deviceCapabilitiesLastUpdate) > updateThreshold) {
       this.ws.emit('update_device_capabilities', this.deviceCapabilities);
       this.deviceCapabilities = [];
-      this.deviceCapabilitiesLastUpdate = new Date().getTime();
+      this.deviceCapabilitiesLastUpdate = currentTime;
     }
+  }
+
+  updateDeviceState(ident: string, state: boolean) {
+    this.ws.emit('update_device_state', { ident, state });
   }
 
   async registerDrivers(force = false) {

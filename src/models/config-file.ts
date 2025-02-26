@@ -17,5 +17,8 @@ export interface ConfigFile {
   token: string;
   log: {
     path: string;
-  }
+  },
+  capability: {
+    threshold: 10000
+  };
 }
