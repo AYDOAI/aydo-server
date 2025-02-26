@@ -394,7 +394,7 @@ export const Cloud = toMixin(base => class Cloud extends base {
     }
 
     ports.forEach(port => {
-      console.log(`- port: ${port.path}, manufacturer: ${port.manufacturer}, vendorId: ${port.vendorId}`);
+      console.log('Port:', port);
 
       const manufacturer = port.manufacturer ? port.manufacturer.toLowerCase() : '';
       const vendorId = port.vendorId ? port.vendorId.toLowerCase() : '';
