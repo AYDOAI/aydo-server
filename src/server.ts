@@ -47,6 +47,9 @@ try {
     log: {
       path: './logs',
     },
+    capability: {
+      threshold: 10000
+    }
   };
   updateConfig();
 }
