@@ -262,7 +262,8 @@ export const Cloud = toMixin(base => class Cloud extends base {
         parentId: device.db_device.parent_id,
         disabled: device.db_device.disabled,
         capabilities: [],
-        settings: []
+        settings: [],
+        isOnline: device?.current_status?.connected
       };
 
       console.log(opts);
