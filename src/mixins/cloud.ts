@@ -142,6 +142,12 @@ export const Cloud = toMixin(base => class Cloud extends base {
           }).catch(error => {
             this.ws.emit('response', {id, error})
           })
+          case 'destroy':
+            this.destroyGateway().then(data => {
+              this.ws.emit('response', {id, data})
+            }).catch(error => {
+              this.ws.emit('response', {id, error})
+            })
           break;
       }
     });

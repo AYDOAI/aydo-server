@@ -474,6 +474,25 @@ export class App extends Base.with(Config, Database, Emitter, Log, RestApi, Driv
     });
   }
 
+  destroyGateway(){
+    return new Promise(async (resolve, reject) => {
+      try {
+          const keys = Object.keys(this.devices);
+          const ids = keys.filter(key => this.devices[key].db_device.id).map(key => this.devices[key].db_device.id);
+          if(ids.length) {
+            await this.destroyItem(DbTables.DeviceCapabilities, { device_id: ids });
+            await this.destroyItem(DbTables.DeviceSettings, { device_id: ids });
+            await this.destroyItem(DbTables.Devices, { id: ids });
+          }
+          this.terminate();
+          this.restart();
+          resolve(undefined);
+      } catch (error) {
+        reject(error);
+      }
+    });
+  }
+
   newZone(user_id: number, body: any) {
     return new Promise((resolve, reject) => {
       const driver = this.findDriverByClassName(body.class_name);
