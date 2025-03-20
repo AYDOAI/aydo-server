@@ -32,10 +32,6 @@ export const Log = toMixin(base => class Log extends base {
 
   loggers: Record<string, winston.Logger> = {};
   logQueue: BetterQueue;
-  latestLogs: Array<{ message: string, id: number, error?: boolean }>;
-  lastSendLogs: number | null;
-  lastSendTimeout: NodeJS.Timeout | null;
-  lastSendData: Array<{ message: string, id: number, error?: boolean }>;
   useProcessInfo: boolean;
   currentProcessTime: number;
   lastProcessTime: number;
@@ -47,15 +43,13 @@ export const Log = toMixin(base => class Log extends base {
     arrayBuffers: number
   };
   lastMemoryUsageTime: number;
+  logBuffer: { message: string; id: number; error: boolean }[] = [];
+  logSendInterval: any;
 
   constructor() {
     super();
 
     this.useProcessInfo = false;
-    this.latestLogs = [];
-    this.lastSendData = [];
-    this.lastSendLogs = null;
-    this.lastSendTimeout = null;
     this.logQueue = new BetterQueue(this.onLogQueue.bind(this), {name: 'app-logs'});
   }
 
@@ -90,6 +84,9 @@ export const Log = toMixin(base => class Log extends base {
           this.log(`${p} not exists`);
         });
       }
+    }
+    if (!this.logSendInterval) {
+      this.logSendInterval = setInterval(() => this.sendLogs(), 10 * 60 * 1000);
     }
   }
 
@@ -286,7 +283,7 @@ export const Log = toMixin(base => class Log extends base {
     }
 
     logger.info(message);
-    this.sendLog(message);
+    this.addLog(message);
   }
 
   loggerError(logger: winston.Logger, message: string, err: any) {
@@ -306,37 +303,19 @@ export const Log = toMixin(base => class Log extends base {
       logger.error(logMessage);
     }
 
-    this.sendLog(logMessage, true);
+    this.addLog(logMessage, true);
   }
 
-  sendLog(message: string, error = false) {
-    if (!this.config.cloud?.cloud) {
+  addLog(message: string, error = false) {
       const logObj = { message, id: Date.now(), error };
+      this.logBuffer.push(logObj);
+  }
 
-      this.latestLogs.push(logObj);
-      if (this.latestLogs.length > 100) {
-        this.latestLogs.splice(0, this.latestLogs.length - 100);
-      }
-
-      if (!this.ws) return;
-
-      this.lastSendData.push(logObj);
-      const len = this.lastSendData.length;
-      const send = () => {
-        if (this.lastSendData.length > 0) {
-          this.lastSendLogs = Date.now();
-          this.ws.emit('logs', this.lastSendData);
-          this.lastSendData.splice(0, len);
-        }
-      };
-
-      const timeSinceLastSend = Date.now() - this.lastSendLogs;
-      if (!this.lastSendLogs || timeSinceLastSend > 5000) {
-        clearTimeout(this.lastSendTimeout);
-        send();
-      } else {
-        this.lastSendTimeout = setTimeout(send, 5000 - timeSinceLastSend);
-      }
+  private sendLogs() {
+    if (!this.ws) return;
+    if (this.ws && this.logBuffer.length > 0) {
+      this.ws.emit('logs', this.logBuffer);
+      this.logBuffer = [];
     }
   }
 });
