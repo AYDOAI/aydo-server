@@ -18,6 +18,7 @@
     "cors": "^2.8.5",
     "express": "^4.18.2",
     "jsonwebtoken": "^9.0.2",
+    "lodash": "^4.17.21",
     "mqtt": "4.3.7",
     "node-eta": "^0.9.0",
     "node-ipc": "11.1.0",
@@ -28,12 +29,14 @@
     "socket.io-client": "^4.7.5",
     "sqlite3": "^5.1.7",
     "umzug": "^3.6.1",
+    "winston": "^3.17.0",
     "yaml": "^2.7.0",
     "zigbee-herdsman": "^2.1.9",
     "zigbee-herdsman-converters": "20.58.0",
     "zigbee2mqtt-frontend": "0.7.6"
   },
   "devDependencies": {
+    "@types/lodash": "^4.17.16",
     "@types/node": "^20.11.16",
     "nodemon": "^3.0.3",
     "ts-loader": "^9.5.1",
