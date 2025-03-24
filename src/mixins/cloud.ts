@@ -3,6 +3,9 @@ import {toMixin} from '../../lib/foibles';
 import * as os from 'os';
 import {EventTypes} from '../models/event-types';
 import {DbTables} from '../models/db-tables';
+import * as path from 'path';
+import * as fs from 'fs';
+import * as child_process from 'child_process';
 
 const io = require('socket.io-client');
 
@@ -34,6 +37,10 @@ export const Cloud = toMixin(base => class Cloud extends base {
   zonesUpdateTimeout = null;
   deviceCapabilities = [];
   deviceCapabilitiesLastUpdate = null;
+  coreUpdateAvailable = false;
+  coreUpdateVersion = null;
+  coreUpdateUrl = null;
+  coreUpdateInProgress = false;
 
   get url() {
     return this.config.cloud && this.config.cloud.url ? this.config.cloud.url : 'https://cloud.aydo.ai';
@@ -46,6 +53,10 @@ export const Cloud = toMixin(base => class Cloud extends base {
   load(options: AppOptions) {
     super.load(options);
     this.register();
+
+    if (this.config.core?.updateOnStart) {
+      this.checkForCoreUpdate();
+    }
   }
 
   register() {
@@ -173,6 +184,9 @@ export const Cloud = toMixin(base => class Cloud extends base {
       }
     });
 
+    this.subscribe(EventTypes.ApplicationCheckCoreUpdate, () => {
+      this.checkForCoreUpdate();
+    });
   }
 
   updateCapabilityValues(ident, identifier, values) {
@@ -422,5 +436,210 @@ export const Cloud = toMixin(base => class Cloud extends base {
 
     console.log('Filtered devices:', devices);
     return devices;
+  }
+
+  async checkForCoreUpdate() {
+    console.log('Checking for core updates');
+    if (this.coreUpdateInProgress) {
+      console.log('The core update is already in progress, skipping the check.');
+      return;
+    }
+    
+    try {
+      const response = await this.cloudRequest('/backend/v2/components/latest');
+      
+      if (!response || !response.version) {
+        console.log('Failed to retrieve core version information.');
+        return;
+      }
+      
+      console.log(`Current version: ${this.version}, availiable version: ${response.version}`);
+      
+
+      if (response.version !== this.version) {
+        this.coreUpdateAvailable = true;
+        this.coreUpdateVersion = response.version;
+        this.coreUpdateUrl = response.url;
+
+        this.publish(EventTypes.ApplicationCoreUpdateAvailable, {
+          currentVersion: this.version,
+          newVersion: response.version,
+          url: response.url
+        });
+        
+
+        this.updateCore(response.version, response.url);
+      } else {
+        this.coreUpdateAvailable = false;
+      }
+    } catch (error) {
+      console.error('Error while checking for core updates:', error);
+    }
+  }
+
+  async cloudRequest(endpoint: string, method: string = 'GET', data: any = null) {
+    try {
+      const url = new URL(endpoint, this.url);
+      const options = {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Server-ID': this.identifier,
+          'X-Auth-Token': this.token
+        },
+        body: data ? JSON.stringify(data) : undefined
+      };
+      
+      const response = await fetch(url.toString(), options);
+      if (!response.ok) {
+        throw new Error(`HTTP Error: ${response.status}`);
+      }
+      
+      return await response.json();
+    } catch (error) {
+      console.error('Error in cloudRequest:', error);
+      throw error;
+    }
+  }
+
+  async updateCore(version: string, url: string) {
+    if (this.coreUpdateInProgress) {
+      console.log('Core update is already in progress.');
+      return;
+    }
+    
+    this.coreUpdateInProgress = true;
+    
+    try {
+      const updatePath = this.config.core?.updatePath || path.join(os.homedir(), '.aydo', 'updates');
+      if (!fs.existsSync(updatePath)) {
+        fs.mkdirSync(updatePath, { recursive: true });
+      }
+      
+      const updateFile = path.join(updatePath, `aydo-server-${version}.zip`);
+
+      await this.downloadFile(url, updateFile);
+      if (this.config.core?.backupBeforeUpdate) {
+        await this.backupCore();
+      }
+      
+
+      await this.installUpdate(updateFile);
+
+      this.coreUpdateInProgress = false;
+
+      setTimeout(() => {
+        this.restart(100);
+      }, 2000);
+    } catch (error) {
+      console.error('Error during kernel update:', error);
+      this.coreUpdateInProgress = false;
+    }
+  }
+
+  async downloadFile(url: string, destination: string): Promise<void> {
+    try {
+      const response = await fetch(url);
+      
+      if (!response.ok) {
+        throw new Error(`File download from ${url} error: ${response.status}`);
+      }
+
+      const fileStream = fs.createWriteStream(destination);
+      const buffer = await response.arrayBuffer();
+      
+      return new Promise((resolve, reject) => {
+        fileStream.write(Buffer.from(buffer));
+        fileStream.on('finish', () => {
+          fileStream.close();
+          resolve();
+        });
+        fileStream.on('error', (error) => {
+          fs.unlink(destination, () => {});
+          reject(error);
+        });
+        fileStream.end();
+      });
+    } catch (error) {
+      console.error(`File download from ${url} error:`, error);
+      fs.unlink(destination, () => {});
+      throw error;
+    }
+  }
+
+  async backupCore(): Promise<void> {
+    const backupPath = path.join(os.homedir(), '.aydo', 'backups');
+    if (!fs.existsSync(backupPath)) {
+      fs.mkdirSync(backupPath, { recursive: true });
+    }
+    
+    const backupFile = path.join(backupPath, `aydo-server-backup-${this.version}-${Date.now()}.zip`);
+    
+
+    return new Promise((resolve, reject) => {
+      const workDir = process.cwd();
+      const cmd = `cd "${workDir}" && zip -r "${backupFile}" . -x "node_modules/*" "*.git*"`;
+      
+      child_process.exec(cmd, (error) => {
+        if (error) {
+          console.error('Error while creating a backup', error);
+          reject(error);
+        } else {
+          console.log(`Backup created: ${backupFile}`);
+          resolve();
+        }
+      });
+    });
+  }
+
+  async installUpdate(updateFile: string): Promise<void> {
+    console.log(`Installing update from file ${updateFile}`);
+    
+    return new Promise((resolve, reject) => {
+      const workDir = process.cwd();
+      const tempDir = path.join(os.tmpdir(), `aydo-update-${Date.now()}`);
+
+      if (!fs.existsSync(tempDir)) {
+        fs.mkdirSync(tempDir, { recursive: true });
+      }
+
+      const extractCmd = `unzip -o "${updateFile}" -d "${tempDir}"`;
+      
+      child_process.exec(extractCmd, (extractError) => {
+        if (extractError) {
+          console.error('Error while extracting the update:', extractError);
+          reject(extractError);
+          return;
+        }
+
+        const copyCmd = `cp -R "${tempDir}/"* "${workDir}/"`;
+        
+        child_process.exec(copyCmd, (copyError) => {
+          if (copyError) {
+            console.error('Error while copying update files:', copyError);
+            reject(copyError);
+            return;
+          }
+
+          const installCmd = `cd "${workDir}" && npm install`;
+          
+          child_process.exec(installCmd, (installError) => {
+            if (installError) {
+              console.error('Error while installing dependencies:', installError);
+              reject(installError);
+              return;
+            }
+            
+
+            fs.rm(tempDir, { recursive: true, force: true }, (rmError) => {
+              if (rmError) {
+                console.warn('Error while deleting temporary directory:', rmError);
+              }
+              resolve();
+            });
+          });
+        });
+      });
+    });
   }
 });

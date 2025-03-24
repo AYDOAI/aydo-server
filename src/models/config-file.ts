@@ -21,4 +21,10 @@ export interface ConfigFile {
   capability: {
     threshold: 10000
   };
+  core?: {
+    autoUpdate: boolean;
+    updateOnStart: boolean;
+    backupBeforeUpdate: boolean;
+    updatePath?: string;
+  };
 }
