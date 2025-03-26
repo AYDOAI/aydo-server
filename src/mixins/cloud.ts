@@ -56,6 +56,7 @@ export const Cloud = toMixin(base => class Cloud extends base {
 
     if (this.config.core?.updateOnStart) {
       this.checkForCoreUpdate();
+      this.checkForPluginUpdates()
     }
   }
 
@@ -112,6 +113,11 @@ export const Cloud = toMixin(base => class Cloud extends base {
       if (this.zonesReady && !this.zonesSend) {
         this.registerZones();
       }
+    });
+
+    this.ws.on('components_updated', () => {
+      this.checkForCoreUpdate();
+      this.checkForPluginUpdates();
     });
 
     this.ws.on('request', (data) => {
@@ -186,6 +192,7 @@ export const Cloud = toMixin(base => class Cloud extends base {
 
     this.subscribe(EventTypes.ApplicationCheckCoreUpdate, () => {
       this.checkForCoreUpdate();
+      this.checkForPluginUpdates();
     });
   }
 
@@ -468,12 +475,33 @@ export const Cloud = toMixin(base => class Cloud extends base {
         });
         
 
-        this.updateCore(response.version, response.url);
+        await this.updateCore(response.version, response.url);
       } else {
         this.coreUpdateAvailable = false;
       }
     } catch (error) {
       console.error('Error while checking for core updates:', error);
+    }
+  }
+
+
+  async checkForPluginUpdates() {
+    console.log('Check for plugin updates');
+    
+    try {
+      const response = await this.cloudRequest('/backend/v2/components/latest');
+
+      if (!response || !Array.isArray(response.plugins)) {
+        console.log('Failed to retrieve plugin information');
+        return;
+      }
+
+
+      if (response.plugins.length > 0) {
+        await this.updatePlugins(response);
+      }
+    } catch (error) {
+      console.error('Ошибка при проверке обновлений плагинов:', error);
     }
   }
 
@@ -504,7 +532,7 @@ export const Cloud = toMixin(base => class Cloud extends base {
 
   async updateCore(version: string, url: string) {
     if (this.coreUpdateInProgress) {
-      console.log('Core update is already in progress.');
+      console.log('Обновление ядра уже в процессе.');
       return;
     }
     
@@ -532,7 +560,7 @@ export const Cloud = toMixin(base => class Cloud extends base {
         this.restart(100);
       }, 2000);
     } catch (error) {
-      console.error('Error during kernel update:', error);
+      console.error('Ошибка при обновлении ядра:', error);
       this.coreUpdateInProgress = false;
     }
   }
@@ -639,6 +667,116 @@ export const Cloud = toMixin(base => class Cloud extends base {
             });
           });
         });
+      });
+    });
+  }
+
+  async updatePlugins(plugins: any[]) {
+    try {
+      const updatePath = this.config.plugins?.updatePath || path.join(os.homedir(), '.aydo', 'plugin-updates');
+      if (!fs.existsSync(updatePath)) {
+        fs.mkdirSync(updatePath, { recursive: true });
+      }
+
+      const pluginsDir = '/srv/plugins';
+      if (!fs.existsSync(pluginsDir)) {
+        fs.mkdirSync(pluginsDir, { recursive: true });
+      }
+
+      if (this.config.plugins?.backupBeforeUpdate) {
+        await this.backupPlugins();
+      }
+
+      for (const plugin of plugins) {
+        if (!plugin.url || !plugin.name || !plugin.version) {
+          continue;
+        }
+        
+        console.log(`Plugin update ${plugin.name} to version ${plugin.version}`);
+
+        const pluginFile = path.join(updatePath, `${plugin.name}-${plugin.version}.zip`);
+        
+
+        await this.downloadFile(plugin.url, pluginFile);
+        
+
+        const tempDir = path.join(os.tmpdir(), `plugin-update-${plugin.name}-${Date.now()}`);
+        if (!fs.existsSync(tempDir)) {
+          fs.mkdirSync(tempDir, { recursive: true });
+        }
+        
+
+        await new Promise<void>((resolve, reject) => {
+          const extractCmd = `unzip -o "${pluginFile}" -d "${tempDir}"`;
+          
+          child_process.exec(extractCmd, (extractError) => {
+            if (extractError) {
+              console.error(`Error while unpacking the plugiт ${plugin.name}:`, extractError);
+              reject(extractError);
+              return;
+            }
+
+            const copyCmd = `cp -f ${tempDir}/dist/*.js ${pluginsDir}/ && cp -f ${tempDir}/src/*.json ${pluginsDir}/`;
+            
+            child_process.exec(copyCmd, (copyError) => {
+              if (copyError) {
+                console.error(`Error while copying plugin files ${plugin.name}:`, copyError);
+                reject(copyError);
+                return;
+              }
+              
+
+              fs.rm(tempDir, { recursive: true, force: true }, (rmError) => {
+                if (rmError) {
+                  console.warn(`Error while deleting the temporary directory for the plugin ${plugin.name}:`, rmError);
+                }
+                resolve();
+              });
+            });
+          });
+        });
+        
+        console.log(`Plugin ${plugin.name} successfully updated to version ${plugin.version}`);
+      }
+
+      setTimeout(() => {
+        this.restart(100);
+      }, 2000);
+      
+    } catch (error) {
+      console.error('Error while updating plugins', error);
+    }
+  }
+
+
+  async backupPlugins(): Promise<void> {
+    console.log('Creating a backup of plugins');
+    
+    const backupPath = path.join(os.homedir(), '.aydo', 'plugin-backups');
+    if (!fs.existsSync(backupPath)) {
+      fs.mkdirSync(backupPath, { recursive: true });
+    }
+    
+    const backupFile = path.join(backupPath, `plugins-backup-${Date.now()}.zip`);
+    const pluginsDir = '/srv/plugins';
+    
+    return new Promise<void>((resolve, reject) => {
+      if (!fs.existsSync(pluginsDir)) {
+        console.log('Plugin directory not found, skipping backup');
+        resolve();
+        return;
+      }
+      
+      const cmd = `cd "${pluginsDir}" && zip -r "${backupFile}" .`;
+      
+      child_process.exec(cmd, (error) => {
+        if (error) {
+          console.error('Error while creating a backup of plugins:', error);
+          reject(error);
+        } else {
+          console.log(`Plugin backup created: ${backupFile}`);
+          resolve();
+        }
       });
     });
   }
