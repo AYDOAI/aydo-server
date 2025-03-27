@@ -6,6 +6,7 @@ import {ConfigFile} from './models/config-file';
 const fs = require('fs');
 const os = require('os');
 const {Umzug, SequelizeStorage} = require('umzug');
+const child_process = require('child_process');
 
 const path = require('path');
 const configDir = path.join(os.homedir(), '.aydo', 'server').replace(/\\/g, '/');
@@ -49,6 +50,11 @@ try {
     },
     capability: {
       threshold: 10000
+    },
+    core: {
+      autoUpdate: false,
+      updateOnStart: true,
+      backupBeforeUpdate: true
     }
   };
   updateConfig();
@@ -106,6 +112,20 @@ process.on('uncaughtException', (err) => {
   });
   if (app) {
     app.error('uncaughtException', err);
+  }
+});
+
+process.on('exit', (code) => {
+  console.log(`Process exit with code: ${code}`);
+
+  if (code === 100) {
+    setTimeout(() => {
+      const child = child_process.spawn(process.argv[0], process.argv.slice(1), {
+        detached: true,
+        stdio: 'inherit'
+      });
+      child.unref();
+    }, 1000);
   }
 });
 
