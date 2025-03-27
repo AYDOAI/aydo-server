@@ -249,7 +249,7 @@ export const IPC = toMixin(parent => class IPC extends parent {
         {
           name: EventTypes.Notify,
           method: (data, socket) => {
-            // this.ws.sendNotify(data.message);
+            this.ws.emit('notify', { message: data.message });
           }
         },
         {

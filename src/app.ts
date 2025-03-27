@@ -557,10 +557,10 @@ export class App extends Base.with(Config, Database, Emitter, Log, RestApi, Driv
     });
   }
 
-  restart() {
+  restart(code?: number) {
     clearTimeout(this.restartTimeout);
     this.restartTimeout = setTimeout(() => {
-      process.exit();
+      process.exit(code);
     }, 10000);
   }
 
