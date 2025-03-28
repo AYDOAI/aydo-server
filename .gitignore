@@ -9,3 +9,5 @@ dist/
 
 server.js
 server.js.LICENSE.txt
+
+logs/
