@@ -56,7 +56,10 @@ export const Cloud = toMixin(base => class Cloud extends base {
 
     if (this.config.core?.updateOnStart) {
       this.checkForCoreUpdate();
-      this.checkForPluginUpdates()
+      this.checkForPluginUpdates();
+      setTimeout(() => {
+        this.restart(100);
+      }, 2000);
     }
   }
 
@@ -115,9 +118,14 @@ export const Cloud = toMixin(base => class Cloud extends base {
       }
     });
 
-    this.ws.on('components_updated', () => {
-      this.checkForCoreUpdate();
-      this.checkForPluginUpdates();
+    this.ws.on('components_updated', async () => {
+      await this.checkForCoreUpdate();
+      await this.checkForPluginUpdates();
+
+      setTimeout(() => {
+        this.restart(100);
+      }, 2000);
+
     });
 
     this.ws.on('request', (data) => {
@@ -159,12 +167,12 @@ export const Cloud = toMixin(base => class Cloud extends base {
           }).catch(error => {
             this.ws.emit('response', {id, error})
           })
-          case 'destroy':
-            this.destroyGateway().then(data => {
-              this.ws.emit('response', {id, data})
-            }).catch(error => {
-              this.ws.emit('response', {id, error})
-            })
+        case 'destroy':
+          this.destroyGateway().then(data => {
+            this.ws.emit('response', {id, data})
+          }).catch(error => {
+            this.ws.emit('response', {id, error})
+          })
           break;
       }
     });
@@ -189,11 +197,6 @@ export const Cloud = toMixin(base => class Cloud extends base {
         this.registerZones(true);
       }
     });
-
-    this.subscribe(EventTypes.ApplicationCheckCoreUpdate, () => {
-      this.checkForCoreUpdate();
-      this.checkForPluginUpdates();
-    });
   }
 
   updateCapabilityValues(ident, identifier, values) {
@@ -203,7 +206,7 @@ export const Cloud = toMixin(base => class Cloud extends base {
     const updateThreshold = this.config.capability?.threshold || 10000;
 
     if (!this.deviceCapabilitiesLastUpdate ||
-        (currentTime - this.deviceCapabilitiesLastUpdate) > updateThreshold) {
+      (currentTime - this.deviceCapabilitiesLastUpdate) > updateThreshold) {
       this.ws.emit('update_device_capabilities', this.deviceCapabilities);
       this.deviceCapabilities = [];
       this.deviceCapabilitiesLastUpdate = currentTime;
@@ -451,17 +454,17 @@ export const Cloud = toMixin(base => class Cloud extends base {
       console.log('The core update is already in progress, skipping the check.');
       return;
     }
-    
+
     try {
       const response = await this.cloudRequest('/backend/v2/components/latest');
-      
+
       if (!response || !response.version) {
         console.log('Failed to retrieve core version information.');
         return;
       }
-      
+
       console.log(`Current version: ${this.version}, availiable version: ${response.version}`);
-      
+
 
       if (response.version !== this.version) {
         this.coreUpdateAvailable = true;
@@ -473,7 +476,7 @@ export const Cloud = toMixin(base => class Cloud extends base {
           newVersion: response.version,
           url: response.url
         });
-        
+
 
         await this.updateCore(response.version, response.url);
       } else {
@@ -487,7 +490,7 @@ export const Cloud = toMixin(base => class Cloud extends base {
 
   async checkForPluginUpdates() {
     console.log('Check for plugin updates');
-    
+
     try {
       const response = await this.cloudRequest('/backend/v2/components/latest');
 
@@ -498,10 +501,10 @@ export const Cloud = toMixin(base => class Cloud extends base {
 
 
       if (response.plugins.length > 0) {
-        await this.updatePlugins(response);
+        await this.updatePlugins(response.plugins);
       }
     } catch (error) {
-      console.error('Ошибка при проверке обновлений плагинов:', error);
+      console.error('Error while checking for plugin updates:', error);
     }
   }
 
@@ -517,12 +520,12 @@ export const Cloud = toMixin(base => class Cloud extends base {
         },
         body: data ? JSON.stringify(data) : undefined
       };
-      
+
       const response = await fetch(url.toString(), options);
       if (!response.ok) {
         throw new Error(`HTTP Error: ${response.status}`);
       }
-      
+
       return await response.json();
     } catch (error) {
       console.error('Error in cloudRequest:', error);
@@ -532,35 +535,31 @@ export const Cloud = toMixin(base => class Cloud extends base {
 
   async updateCore(version: string, url: string) {
     if (this.coreUpdateInProgress) {
-      console.log('Обновление ядра уже в процессе.');
+      console.log('The core update is already in progress.');
       return;
     }
-    
+
     this.coreUpdateInProgress = true;
-    
+
     try {
       const updatePath = this.config.core?.updatePath || path.join(os.homedir(), '.aydo', 'updates');
       if (!fs.existsSync(updatePath)) {
         fs.mkdirSync(updatePath, { recursive: true });
       }
-      
+
       const updateFile = path.join(updatePath, `aydo-server-${version}.zip`);
 
       await this.downloadFile(url, updateFile);
       if (this.config.core?.backupBeforeUpdate) {
         await this.backupCore();
       }
-      
+
 
       await this.installUpdate(updateFile);
 
       this.coreUpdateInProgress = false;
-
-      setTimeout(() => {
-        this.restart(100);
-      }, 2000);
     } catch (error) {
-      console.error('Ошибка при обновлении ядра:', error);
+      console.log('The core update is already in progress.');
       this.coreUpdateInProgress = false;
     }
   }
@@ -568,14 +567,14 @@ export const Cloud = toMixin(base => class Cloud extends base {
   async downloadFile(url: string, destination: string): Promise<void> {
     try {
       const response = await fetch(url);
-      
+
       if (!response.ok) {
         throw new Error(`File download from ${url} error: ${response.status}`);
       }
 
       const fileStream = fs.createWriteStream(destination);
       const buffer = await response.arrayBuffer();
-      
+
       return new Promise((resolve, reject) => {
         fileStream.write(Buffer.from(buffer));
         fileStream.on('finish', () => {
@@ -600,14 +599,14 @@ export const Cloud = toMixin(base => class Cloud extends base {
     if (!fs.existsSync(backupPath)) {
       fs.mkdirSync(backupPath, { recursive: true });
     }
-    
+
     const backupFile = path.join(backupPath, `aydo-server-backup-${this.version}-${Date.now()}.zip`);
-    
+
 
     return new Promise((resolve, reject) => {
       const workDir = process.cwd();
       const cmd = `cd "${workDir}" && zip -r "${backupFile}" . -x "node_modules/*" "*.git*"`;
-      
+
       child_process.exec(cmd, (error) => {
         if (error) {
           console.error('Error while creating a backup', error);
@@ -622,7 +621,7 @@ export const Cloud = toMixin(base => class Cloud extends base {
 
   async installUpdate(updateFile: string): Promise<void> {
     console.log(`Installing update from file ${updateFile}`);
-    
+
     return new Promise((resolve, reject) => {
       const workDir = process.cwd();
       const tempDir = path.join(os.tmpdir(), `aydo-update-${Date.now()}`);
@@ -632,7 +631,7 @@ export const Cloud = toMixin(base => class Cloud extends base {
       }
 
       const extractCmd = `unzip -o "${updateFile}" -d "${tempDir}"`;
-      
+
       child_process.exec(extractCmd, (extractError) => {
         if (extractError) {
           console.error('Error while extracting the update:', extractError);
@@ -641,7 +640,7 @@ export const Cloud = toMixin(base => class Cloud extends base {
         }
 
         const copyCmd = `cp -R "${tempDir}/"* "${workDir}/"`;
-        
+
         child_process.exec(copyCmd, (copyError) => {
           if (copyError) {
             console.error('Error while copying update files:', copyError);
@@ -650,14 +649,14 @@ export const Cloud = toMixin(base => class Cloud extends base {
           }
 
           const installCmd = `cd "${workDir}" && npm install`;
-          
+
           child_process.exec(installCmd, (installError) => {
             if (installError) {
               console.error('Error while installing dependencies:', installError);
               reject(installError);
               return;
             }
-            
+
 
             fs.rm(tempDir, { recursive: true, force: true }, (rmError) => {
               if (rmError) {
@@ -691,24 +690,24 @@ export const Cloud = toMixin(base => class Cloud extends base {
         if (!plugin.url || !plugin.name || !plugin.version) {
           continue;
         }
-        
+
         console.log(`Plugin update ${plugin.name} to version ${plugin.version}`);
 
         const pluginFile = path.join(updatePath, `${plugin.name}-${plugin.version}.zip`);
-        
+
 
         await this.downloadFile(plugin.url, pluginFile);
-        
+
 
         const tempDir = path.join(os.tmpdir(), `plugin-update-${plugin.name}-${Date.now()}`);
         if (!fs.existsSync(tempDir)) {
           fs.mkdirSync(tempDir, { recursive: true });
         }
-        
+
 
         await new Promise<void>((resolve, reject) => {
           const extractCmd = `unzip -o "${pluginFile}" -d "${tempDir}"`;
-          
+
           child_process.exec(extractCmd, (extractError) => {
             if (extractError) {
               console.error(`Error while unpacking the plugiт ${plugin.name}:`, extractError);
@@ -716,15 +715,15 @@ export const Cloud = toMixin(base => class Cloud extends base {
               return;
             }
 
-            const copyCmd = `cp -f ${tempDir}/dist/*.js ${pluginsDir}/ && cp -f ${tempDir}/src/*.json ${pluginsDir}/`;
-            
+            const copyCmd = `cp -f ${tempDir}/*.js ${pluginsDir}/ && cp -f ${tempDir}/*.json ${pluginsDir}/`;
+
             child_process.exec(copyCmd, (copyError) => {
               if (copyError) {
                 console.error(`Error while copying plugin files ${plugin.name}:`, copyError);
                 reject(copyError);
                 return;
               }
-              
+
 
               fs.rm(tempDir, { recursive: true, force: true }, (rmError) => {
                 if (rmError) {
@@ -735,14 +734,10 @@ export const Cloud = toMixin(base => class Cloud extends base {
             });
           });
         });
-        
+
         console.log(`Plugin ${plugin.name} successfully updated to version ${plugin.version}`);
       }
 
-      setTimeout(() => {
-        this.restart(100);
-      }, 2000);
-      
     } catch (error) {
       console.error('Error while updating plugins', error);
     }
@@ -751,24 +746,24 @@ export const Cloud = toMixin(base => class Cloud extends base {
 
   async backupPlugins(): Promise<void> {
     console.log('Creating a backup of plugins');
-    
+
     const backupPath = path.join(os.homedir(), '.aydo', 'plugin-backups');
     if (!fs.existsSync(backupPath)) {
       fs.mkdirSync(backupPath, { recursive: true });
     }
-    
+
     const backupFile = path.join(backupPath, `plugins-backup-${Date.now()}.zip`);
     const pluginsDir = '/srv/plugins';
-    
+
     return new Promise<void>((resolve, reject) => {
       if (!fs.existsSync(pluginsDir)) {
         console.log('Plugin directory not found, skipping backup');
         resolve();
         return;
       }
-      
+
       const cmd = `cd "${pluginsDir}" && zip -r "${backupFile}" .`;
-      
+
       child_process.exec(cmd, (error) => {
         if (error) {
           console.error('Error while creating a backup of plugins:', error);
