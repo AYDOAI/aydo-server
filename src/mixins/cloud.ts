@@ -43,7 +43,8 @@ export const Cloud = toMixin(base => class Cloud extends base {
   coreUpdateInProgress = false;
 
   get url() {
-    return this.config.cloud && this.config.cloud.url ? this.config.cloud.url : 'https://cloud.aydo.ai';
+    return 'http://localhost:3000'
+    // return this.config.cloud && this.config.cloud.url ? this.config.cloud.url : 'https://cloud.aydo.ai';
   }
 
   get active() {
@@ -159,7 +160,8 @@ export const Cloud = toMixin(base => class Cloud extends base {
           }).catch(error => {
             this.ws.emit('response', {id, error})
           })
-          case 'destroy':
+          break;
+        case 'destroy':
             this.destroyGateway().then(data => {
               this.ws.emit('response', {id, data})
             }).catch(error => {
