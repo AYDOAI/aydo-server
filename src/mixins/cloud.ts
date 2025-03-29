@@ -43,8 +43,7 @@ export const Cloud = toMixin(base => class Cloud extends base {
   coreUpdateInProgress = false;
 
   get url() {
-    return 'http://localhost:3000'
-    // return this.config.cloud && this.config.cloud.url ? this.config.cloud.url : 'https://cloud.aydo.ai';
+    return this.config.cloud && this.config.cloud.url ? this.config.cloud.url : 'https://cloud.aydo.ai';
   }
 
   get active() {
