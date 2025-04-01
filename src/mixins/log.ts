@@ -43,7 +43,7 @@ export const Log = toMixin(base => class Log extends base {
     arrayBuffers: number
   };
   lastMemoryUsageTime: number;
-  logBuffer: { message: string; id: number; error: boolean }[] = [];
+  logBuffer: string[];
   logSendInterval: any;
 
   constructor() {
@@ -303,12 +303,11 @@ export const Log = toMixin(base => class Log extends base {
       logger.error(logMessage);
     }
 
-    this.addLog(logMessage, true);
+    this.addLog(logMessage);
   }
 
-  addLog(message: string, error = false) {
-      const logObj = { message, id: Date.now(), error };
-      this.logBuffer.push(logObj);
+  addLog(message: string) {
+      this.logBuffer.push(message);
   }
 
   private sendLogs() {
