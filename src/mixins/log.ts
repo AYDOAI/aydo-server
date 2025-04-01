@@ -48,7 +48,7 @@ export const Log = toMixin(base => class Log extends base {
 
   constructor() {
     super();
-
+    this.logBuffer = [];
     this.useProcessInfo = false;
     this.logQueue = new BetterQueue(this.onLogQueue.bind(this), {name: 'app-logs'});
   }
