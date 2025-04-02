@@ -521,7 +521,7 @@ export const Cloud = toMixin(base => class Cloud extends base {
 
       return await response.json();
     } catch (error) {
-      console.error('Error in cloudRequest:', error);
+      console.error(`Error in cloudRequest (${method}: ${endpoint}):`, error);
       throw error;
     }
   }
