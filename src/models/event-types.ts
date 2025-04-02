@@ -46,6 +46,8 @@ export enum EventTypes {
   ApplicationSubscribeDevice = 'application->subscribeDevice',
   ApplicationUpdateClients = 'application->updateClients',
   ApplicationSavePlugins = 'application->savePlugins',
+  ApplicationCheckCoreUpdate = 'application->checkCoreUpdate',
+  ApplicationCoreUpdateAvailable = 'application->coreUpdateAvailable',
 
   DatabaseReady = 'database->ready',
   DatabaseConnected = 'database->connected',
