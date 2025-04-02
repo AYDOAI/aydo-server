@@ -9,3 +9,7 @@ dist/
 
 server.js
 server.js.LICENSE.txt
+
+.DS_Store
+
+logs/

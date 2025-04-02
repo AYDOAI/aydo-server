@@ -477,16 +477,22 @@ export class App extends Base.with(Config, Database, Emitter, Log, RestApi, Driv
   destroyGateway(){
     return new Promise(async (resolve, reject) => {
       try {
-          const keys = Object.keys(this.devices);
-          const ids = keys.filter(key => this.devices[key].db_device.id).map(key => this.devices[key].db_device.id);
-          if(ids.length) {
-            await this.destroyItem(DbTables.DeviceCapabilities, { device_id: ids });
-            await this.destroyItem(DbTables.DeviceSettings, { device_id: ids });
-            await this.destroyItem(DbTables.Devices, { id: ids });
+        for (const key in this.devices) {
+          const device = this.devices[key];
+          if (device) {
+            await device.deleteDeviceEx();
           }
+        }
+
+        await this.destroyItem(DbTables.DeviceCapabilities);
+        await this.destroyItem(DbTables.DeviceSettings);
+        await this.destroyItem(DbTables.Devices);
+
+        setTimeout(() => {
           this.terminate();
           this.restart();
-          resolve(undefined);
+        }, 1000);
+        resolve(undefined);
       } catch (error) {
         reject(error);
       }
@@ -557,10 +563,10 @@ export class App extends Base.with(Config, Database, Emitter, Log, RestApi, Driv
     });
   }
 
-  restart() {
+  restart(code?: number) {
     clearTimeout(this.restartTimeout);
     this.restartTimeout = setTimeout(() => {
-      process.exit();
+      process.exit(code);
     }, 10000);
   }
 
