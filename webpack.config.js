@@ -1,4 +1,5 @@
 const path = require('path');
+const CopyWebpackPlugin = require('copy-webpack-plugin');
 
 module.exports = {
   entry: {
@@ -45,8 +46,16 @@ module.exports = {
   resolve: {
     extensions: ['.tsx', '.ts', '.js']
   },
+  plugins: [
+    new CopyWebpackPlugin({
+      patterns: [
+        { from: 'src/views', to: "./src/views"},
+        { from: 'public', to: "./public"},
+      ],
+    }),
+  ],
   output: {
     filename: '[name].js',
-    path: path.resolve(__dirname, './')
+    path: path.resolve(__dirname, './dist')
   }
 };
