@@ -57,9 +57,6 @@ export const Cloud = toMixin(base => class Cloud extends base {
     if (this.config.core?.updateOnStart) {
       this.checkForCoreUpdate();
       this.checkForPluginUpdates();
-      setTimeout(() => {
-        this.restart(100);
-      }, 2000);
     }
   }
 
@@ -121,11 +118,6 @@ export const Cloud = toMixin(base => class Cloud extends base {
     this.ws.on('components_updated', async () => {
       await this.checkForCoreUpdate();
       await this.checkForPluginUpdates();
-
-      setTimeout(() => {
-        this.restart(100);
-      }, 2000);
-
     });
 
     this.ws.on('request', (data) => {
