@@ -536,7 +536,7 @@ export class App extends Base.with(Config, Database, Emitter, Log, RestApi, Driv
         const body = {
           name: data.device_name,
           zone_id: data.zone_id,
-          setupRequired: false
+          setup_required: false
         }
         this.updateItem(DbTables.Devices, body, {
           id: device.id,
