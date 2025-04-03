@@ -1,4 +1,5 @@
 import * as path from 'path';
+import * as fs from 'fs';
 
 import * as BetterQueue from '../lib/better-queue/queue';
 
@@ -50,12 +51,20 @@ export interface AppOptions {
 
 // @ts-ignore
 export class App extends Base.with(Config, Database, Emitter, Log, RestApi, Drivers, Devices, IPC, Cloud) {
-  version = '3.0.0';
+  version: string;
   requireEx: RequireEx;
   subDeviceTimeouts = {};
   bonjour: any;
 
   load(options: AppOptions) {
+    fs.readFile('./package.json', 'utf8', (err, data) => {
+      if (err) {
+        console.error('Error reading package.json:', err);
+        return;
+      }
+      this.version = JSON.parse(data).version;
+    });
+
     this.requireEx = options.requireEx;
     this.controllers = new Controllers(this);
 

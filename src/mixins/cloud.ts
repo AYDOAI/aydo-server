@@ -547,12 +547,21 @@ export const Cloud = toMixin(base => class Cloud extends base {
         await this.backupCore();
       }
 
+      const installedVersion = await this.installUpdate(updateFile);
 
-      await this.installUpdate(updateFile);
+      if (installedVersion && installedVersion === version) {
+        console.log(`Core update to version ${version} successful and verified.`);
+        setTimeout(() => {
+          this.terminate();
+          this.restart();
+        }, 1000);
+      } else {
+         console.error(`Core update failed: Installed version (${installedVersion || 'unknown'}) does not match target version (${version}). Restart aborted.`);
+      }
 
       this.coreUpdateInProgress = false;
     } catch (error) {
-      console.log('The core update is already in progress.');
+      console.error('Error during core update process:', error); // Изменено сообщение об ошибке
       this.coreUpdateInProgress = false;
     }
   }
@@ -612,7 +621,7 @@ export const Cloud = toMixin(base => class Cloud extends base {
     });
   }
 
-  async installUpdate(updateFile: string): Promise<void> {
+  async installUpdate(updateFile: string): Promise<string | null> {
     console.log(`Installing update from file ${updateFile}`);
 
     return new Promise((resolve, reject) => {
@@ -650,12 +659,34 @@ export const Cloud = toMixin(base => class Cloud extends base {
               return;
             }
 
-
-            fs.rm(tempDir, { recursive: true, force: true }, (rmError) => {
-              if (rmError) {
-                console.warn('Error while deleting temporary directory:', rmError);
+            
+            const packageJsonPath = path.join(workDir, 'package.json');
+            fs.readFile(packageJsonPath, 'utf8', (readErr, data) => {
+              let installedVersion: string | null = null;
+              if (readErr) {
+                console.error('Error reading package.json after update:', readErr);
+          
+              } else {
+                try {
+                  const packageJson = JSON.parse(data);
+                  installedVersion = packageJson.version || null;
+                   if (installedVersion) {
+                     console.log(`Successfully installed and read version from package.json: ${installedVersion}`);
+                   } else {
+                     console.warn('Could not find version in package.json after update.');
+                   }
+                } catch (parseErr) {
+                  console.error('Error parsing package.json after update:', parseErr);
+                }
               }
-              resolve();
+
+            
+              fs.rm(tempDir, { recursive: true, force: true }, (rmError) => {
+                if (rmError) {
+                  console.warn('Error while deleting temporary directory:', rmError);
+                }
+                resolve(installedVersion);
+              });
             });
           });
         });
@@ -670,7 +701,7 @@ export const Cloud = toMixin(base => class Cloud extends base {
         fs.mkdirSync(updatePath, { recursive: true });
       }
 
-      const pluginsDir = '/srv/plugins';
+      const pluginsDir = path.join(process.cwd(), 'plugins');
       if (!fs.existsSync(pluginsDir)) {
         fs.mkdirSync(pluginsDir, { recursive: true });
       }
@@ -681,61 +712,90 @@ export const Cloud = toMixin(base => class Cloud extends base {
 
       for (const plugin of plugins) {
         if (!plugin.url || !plugin.name || !plugin.version) {
+          console.warn(`Skipping plugin update due to missing data: ${JSON.stringify(plugin)}`);
           continue;
         }
 
-        console.log(`Plugin update ${plugin.name} to version ${plugin.version}`);
+        const metadataPath = path.join(pluginsDir, `${plugin.name}.json`);
+        let installedVersion = null;
+        if (fs.existsSync(metadataPath)) {
+          try {
+            const metadataContent = fs.readFileSync(metadataPath, 'utf-8');
+            const installedMetadata = JSON.parse(metadataContent);
+            installedVersion = installedMetadata.version;
+          } catch (readError) {
+            console.error(`Error reading metadata for plugin ${plugin.name}:`, readError);
+          }
+        }
+
+        if (installedVersion && installedVersion === plugin.version) {
+          console.log(`Plugin ${plugin.name} is already up to date (version ${installedVersion}). Skipping update.`);
+          continue;
+        }
+
+        console.log(`Updating plugin ${plugin.name} from version ${installedVersion || 'N/A'} to ${plugin.version}`);
 
         const pluginFile = path.join(updatePath, `${plugin.name}-${plugin.version}.zip`);
 
+        try {
+          await this.downloadFile(plugin.url, pluginFile);
 
-        await this.downloadFile(plugin.url, pluginFile);
+          const tempDir = path.join(os.tmpdir(), `plugin-update-${plugin.name}-${Date.now()}`);
+          if (!fs.existsSync(tempDir)) {
+            fs.mkdirSync(tempDir, { recursive: true });
+          }
 
-
-        const tempDir = path.join(os.tmpdir(), `plugin-update-${plugin.name}-${Date.now()}`);
-        if (!fs.existsSync(tempDir)) {
-          fs.mkdirSync(tempDir, { recursive: true });
-        }
-
-
-        await new Promise<void>((resolve, reject) => {
-          const extractCmd = `unzip -o "${pluginFile}" -d "${tempDir}"`;
-
-          child_process.exec(extractCmd, (extractError) => {
-            if (extractError) {
-              console.error(`Error while unpacking the plugiт ${plugin.name}:`, extractError);
-              reject(extractError);
-              return;
-            }
-
-            const copyCmd = `cp -f ${tempDir}/*.js ${pluginsDir}/ && cp -f ${tempDir}/*.json ${pluginsDir}/`;
-
-            child_process.exec(copyCmd, (copyError) => {
-              if (copyError) {
-                console.error(`Error while copying plugin files ${plugin.name}:`, copyError);
-                reject(copyError);
+          await new Promise<void>((resolve, reject) => {
+            const extractCmd = `unzip -o "${pluginFile}" -d "${tempDir}"`;
+            child_process.exec(extractCmd, (extractError) => {
+              if (extractError) {
+                console.error(`Error while unpacking the plugin ${plugin.name}:`, extractError);
+                fs.rm(tempDir, { recursive: true, force: true }, () => reject(extractError));
                 return;
               }
 
-
-              fs.rm(tempDir, { recursive: true, force: true }, (rmError) => {
-                if (rmError) {
-                  console.warn(`Error while deleting the temporary directory for the plugin ${plugin.name}:`, rmError);
-                }
-                resolve();
+              const copyCmd = `cp -f ${tempDir}/*.js "${pluginsDir}/" && cp -f ${tempDir}/*.json "${pluginsDir}/"`;
+              child_process.exec(copyCmd, (copyError) => {
+                fs.rm(tempDir, { recursive: true, force: true }, (rmError) => {
+                  if (rmError) {
+                    console.warn(`Error while deleting the temporary directory for the plugin ${plugin.name}:`, rmError);
+                  }
+                  if (copyError) {
+                    console.error(`Error while copying plugin files ${plugin.name}:`, copyError);
+                    reject(copyError);
+                  } else {
+                    resolve();
+                  }
+                });
               });
             });
           });
-        });
 
-        console.log(`Plugin ${plugin.name} successfully updated to version ${plugin.version}`);
+          console.log(`Plugin ${plugin.name} successfully updated to version ${plugin.version}`);
+
+          try {
+            if (fs.existsSync(metadataPath)) {
+              const metadataContent = fs.readFileSync(metadataPath, 'utf-8');
+              const installedMetadata = JSON.parse(metadataContent);
+              installedMetadata.version = plugin.version;
+              fs.writeFileSync(metadataPath, JSON.stringify(installedMetadata, null, 2));
+              console.log(`Metadata file for ${plugin.name} updated with version ${plugin.version}`);
+            } else {
+              console.warn(`Metadata file ${metadataPath} not found after update, cannot write version.`);
+            }
+          } catch (metaUpdateError) {
+            console.error(`Error updating metadata file for plugin ${plugin.name}:`, metaUpdateError);
+          }
+
+        } catch (pluginUpdateError) {
+          console.error(`Failed to update plugin ${plugin.name}:`, pluginUpdateError);
+        }
       }
 
     } catch (error) {
-      console.error('Error while updating plugins', error);
+      console.error('Error during plugin update process:', error);
     }
   }
-
 
   async backupPlugins(): Promise<void> {
     console.log('Creating a backup of plugins');
@@ -746,7 +806,7 @@ export const Cloud = toMixin(base => class Cloud extends base {
     }
 
     const backupFile = path.join(backupPath, `plugins-backup-${Date.now()}.zip`);
-    const pluginsDir = '/srv/plugins';
+    const pluginsDir = path.join(process.cwd(), 'plugins');
 
     return new Promise<void>((resolve, reject) => {
       if (!fs.existsSync(pluginsDir)) {
