@@ -40,6 +40,10 @@ export class Devices extends BaseModel {
         type: app.Sequelize.DataTypes.DATE,
         allowNull: true,
       },
+      setup_required: {
+        type: app.Sequelize.DataTypes.BOOLEAN,
+        allowNull: true,
+      },
     }, {
       underscored: true,
     });
