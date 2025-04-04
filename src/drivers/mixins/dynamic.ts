@@ -145,10 +145,13 @@ export const Dynamic = toMixin(parent => class Dynamic extends parent {
 
   updateConfig() {
     // super.updateConfig();
+    console.log('***************UPDATE CONFIG****************')
     if (!this.pluginSubDevice && this.device && (!this.getParam('external_driver') || this.getParam('external_driver_ssh_host'))) {
       this.killTimeout = setTimeout(() => {
         this.app.log(`${this.ident} updateConfig`);
+        console.log('***************KILL DEVICE****************')
         this.device.kill();
+        this.app.lastAutoUpdateStates = this.app.lastAutoUpdateStates || {};
         this.app.lastAutoUpdateStates[this.ident] = null;
       }, 3000);
       const disabled = this.disabled;
