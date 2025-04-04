@@ -115,11 +115,17 @@ export const Dynamic = toMixin(parent => class Dynamic extends parent {
             if (!this.app.terminating && !this.disabled && this.app.devices[this.ident] && restart) {
               delete this.device;
               this._connectionState = 0;
-              this.startServer();
               setTimeout(() => {
-                this.app.addConnectQueue(this.initMethod ? this.initMethod : 'init', this.app.devices[this.ident], true);
-              }, 3000);
+                this.startServer();
+                setTimeout(() => {
+                  this.app.addConnectQueue(this.initMethod ? this.initMethod : 'init', this.app.devices[this.ident], true);
+                }, 3000);
+              }, 5000);
             }
+          });
+          device.on('error', (err) => {
+            console.log('*********DEVICE ERROR**********');
+            console.log(err.message);
           });
           setTimeout(() => {
             if (device) {
