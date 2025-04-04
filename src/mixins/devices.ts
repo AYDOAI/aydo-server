@@ -211,6 +211,7 @@ export const Devices = toMixin(base => class Devices extends base {
   }
 
   addConnectQueue(type, device, force = false, timeout = 60000, start = 0) {
+    console.log('*****ADD QUEUE ' + type + ' DEVICE: ' + device);
     this.log(`addConnectQueue->try ${type} ${device.className} ${device.ident} ${force}`)
     checkTimeoutEx(device, 'last_connection_time', () => {
       this.initDeviceQueue.push({
