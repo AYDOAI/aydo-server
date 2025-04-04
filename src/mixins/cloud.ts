@@ -288,7 +288,9 @@ export const Cloud = toMixin(base => class Cloud extends base {
         disabled: device.db_device.disabled,
         capabilities: [],
         settings: [],
-        isOnline: device?.current_status?.connected
+        isOnline: device?.current_status?.connected,
+        setupRequired: driver.class_name === 'zigbee2mqtt.subdevice' &&
+            (device.db_device.setup_required !== undefined ? device.db_device.setup_required : true)
       };
 
       console.log(opts);
