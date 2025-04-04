@@ -37,10 +37,14 @@ export const Cloud = toMixin(base => class Cloud extends base {
   zonesUpdateTimeout = null;
   deviceCapabilities = [];
   deviceCapabilitiesLastUpdate = null;
+
+  updateInProgress = false;
   coreUpdateAvailable = false;
   coreUpdateVersion = null;
   coreUpdateUrl = null;
-  coreUpdateInProgress = false;
+  coreUpdateDownloadedPath: string | null = null;
+  pendingPluginUpdates: any[] | null = null;
+  downloadedPluginUpdates: { name: string; version: string; filePath: string; url: string; }[] = [];
 
   get url() {
     return this.config.cloud && this.config.cloud.url ? this.config.cloud.url : 'https://cloud.aydo.ai';
@@ -55,8 +59,7 @@ export const Cloud = toMixin(base => class Cloud extends base {
     this.register();
 
     if (this.config.core?.updateOnStart) {
-      this.checkForCoreUpdate();
-      this.checkForPluginUpdates();
+      this.applyUpdatesAndRestart();
     }
   }
 
@@ -115,9 +118,8 @@ export const Cloud = toMixin(base => class Cloud extends base {
       }
     });
 
-    this.ws.on('components_updated', async () => {
-      await this.checkForCoreUpdate();
-      await this.checkForPluginUpdates();
+    this.ws.on('force_update_components', async () => {
+      await this.applyUpdatesAndRestart();
     });
 
     this.ws.on('request', (data) => {
@@ -286,7 +288,9 @@ export const Cloud = toMixin(base => class Cloud extends base {
         disabled: device.db_device.disabled,
         capabilities: [],
         settings: [],
-        isOnline: device?.current_status?.connected
+        isOnline: device?.current_status?.connected,
+        setupRequired: driver.class_name === 'zigbee2mqtt.subdevice' &&
+            (device.db_device.setup_required !== undefined ? device.db_device.setup_required : true)
       };
 
       console.log(opts);
@@ -441,65 +445,348 @@ export const Cloud = toMixin(base => class Cloud extends base {
     return devices;
   }
 
-  async checkForCoreUpdate() {
-    console.log('Checking for core updates');
-    if (this.coreUpdateInProgress) {
-      console.log('The core update is already in progress, skipping the check.');
+  // --- Update logic ---
+  async applyUpdatesAndRestart() {
+    if (this.updateInProgress) {
+      console.log('Update process already running, skipping.');
       return;
     }
+
+    this.updateInProgress = true;
+    console.log('Starting update check and installation process...');
+    let restartNeeded = false;
+
+    try {
+      const coreCheckResult = await this.checkForCoreUpdate();
+      const pluginCheckResult = await this.checkForPluginUpdates();
+
+      if (coreCheckResult && this.coreUpdateDownloadedPath && this.coreUpdateVersion) {
+        console.log(`Core update to version ${this.coreUpdateVersion} found. Attempting installation...`);
+        const coreInstallSuccess = await this.installCoreUpdate(this.coreUpdateVersion, this.coreUpdateDownloadedPath);
+        if (coreInstallSuccess) {
+          console.log(`Core update to version ${this.coreUpdateVersion} installed successfully.`);
+          restartNeeded = true;
+          this.ws.emit('installed_component', { core: true, version: this.coreUpdateVersion });
+          this.coreUpdateAvailable = false;
+          this.coreUpdateVersion = null;
+          this.coreUpdateUrl = null;
+          this.coreUpdateDownloadedPath = null;
+        } else {
+          console.error(`Failed to install core update to version ${this.coreUpdateVersion}.`);
+        }
+      } else {
+        console.log('No core updates found or downloaded.');
+      }
+
+
+      if (pluginCheckResult && this.downloadedPluginUpdates.length > 0) {
+        console.log(`Found ${this.downloadedPluginUpdates.length} plugin updates. Attempting installation...`);
+        const pluginInstallSuccess = await this.installPluginUpdates(this.downloadedPluginUpdates);
+        if (pluginInstallSuccess) {
+          console.log('Plugin updates installed successfully.');
+          restartNeeded = true;
+          this.downloadedPluginUpdates.forEach(plugin => {
+            this.ws.emit('installed_component', { plugin: plugin.name, version: plugin.version });
+          });
+
+          this.pendingPluginUpdates = null;
+          this.downloadedPluginUpdates = [];
+        } else {
+          console.error('Failed to install one or more plugin updates.');
+
+        }
+      } else {
+        console.log('No plugin updates found or downloaded.');
+      }
+
+
+
+      if (restartNeeded) {
+        console.log('Updates installed, restarting server in 1 second...');
+        setTimeout(() => {
+          this.terminate();
+          this.restart();
+        }, 1000);
+
+        return;
+      } else {
+        console.log('No updates installed, restart not required.');
+      }
+
+    } catch (error) {
+      console.error('Error during the update process:', error);
+    } finally {
+      if (!restartNeeded) {
+        this.updateInProgress = false;
+        console.log('Update process finished.');
+      }
+    }
+  }
+
+
+  async checkForCoreUpdate(): Promise<boolean> {
+    console.log('Checking for core updates...');
+
+    this.coreUpdateAvailable = false;
+    this.coreUpdateVersion = null;
+    this.coreUpdateUrl = null;
+    this.coreUpdateDownloadedPath = null;
 
     try {
       const response = await this.cloudRequest('/backend/v2/components/latest');
 
       if (!response || !response.version) {
-        console.log('Failed to retrieve core version information.');
-        return;
+        console.log('Failed to get core version information.');
+        return false;
       }
 
-      console.log(`Current version: ${this.version}, availiable version: ${response.version}`);
-
+      console.log(`Current core version: ${this.version}, available version: ${response.version}`);
 
       if (response.version !== this.version) {
-        this.coreUpdateAvailable = true;
+        console.log(`Core update found: ${response.version}. Downloading...`);
         this.coreUpdateVersion = response.version;
         this.coreUpdateUrl = response.url;
 
-        this.publish(EventTypes.ApplicationCoreUpdateAvailable, {
-          currentVersion: this.version,
-          newVersion: response.version,
-          url: response.url
-        });
+        const updatePath = this.config.core?.updatePath || path.join(os.homedir(), '.aydo', 'updates');
+        if (!fs.existsSync(updatePath)) {
+          fs.mkdirSync(updatePath, { recursive: true });
+        }
+        const updateFile = path.join(updatePath, `aydo-server-${this.coreUpdateVersion}.zip`);
 
+        try {
+          await this.downloadFile(this.coreUpdateUrl, updateFile);
+          console.log(`Core update file ${this.coreUpdateVersion} downloaded successfully: ${updateFile}`);
+          this.coreUpdateAvailable = true;
+          this.coreUpdateDownloadedPath = updateFile;
+          this.publish(EventTypes.ApplicationCoreUpdateAvailable, {
+            currentVersion: this.version,
+            newVersion: this.coreUpdateVersion,
+            url: this.coreUpdateUrl
+          });
+          return true;
+        } catch (downloadError) {
+          console.error(`Error downloading core update file ${this.coreUpdateVersion}:`, downloadError);
+          this.coreUpdateVersion = null;
+          this.coreUpdateUrl = null;
+          this.coreUpdateDownloadedPath = null;
+          return false;
+        }
 
-        await this.updateCore(response.version, response.url);
       } else {
-        this.coreUpdateAvailable = false;
+        console.log('Latest core version is installed.');
+        return false;
       }
     } catch (error) {
-      console.error('Error while checking for core updates:', error);
+      console.error('Error checking for core updates:', error);
+      return false;
     }
   }
 
+  async checkForPluginUpdates(): Promise<boolean> {
+    console.log('Checking for plugin updates...');
 
-  async checkForPluginUpdates() {
-    console.log('Check for plugin updates');
+    this.pendingPluginUpdates = null;
+    this.downloadedPluginUpdates = [];
+    let updatesFoundAndDownloaded = false;
 
     try {
       const response = await this.cloudRequest('/backend/v2/components/latest');
 
       if (!response || !Array.isArray(response.plugins)) {
-        console.log('Failed to retrieve plugin information');
-        return;
+        console.log('Failed to get plugin information.');
+        return false;
+      }
+
+      if (response.plugins.length === 0) {
+        console.log('No available plugins to check for updates.');
+        return false;
+      }
+
+      this.pendingPluginUpdates = response.plugins;
+
+      const pluginsDir = path.join(process.cwd(), 'plugins');
+      const updatePath = this.config.plugins?.updatePath || path.join(os.homedir(), '.aydo', 'plugin-updates');
+      if (!fs.existsSync(updatePath)) {
+        fs.mkdirSync(updatePath, { recursive: true });
+      }
+      if (!fs.existsSync(pluginsDir)) {
+        fs.mkdirSync(pluginsDir, { recursive: true });
       }
 
 
-      if (response.plugins.length > 0) {
-        await this.updatePlugins(response.plugins);
+      for (const plugin of this.pendingPluginUpdates) {
+        if (!plugin.url || !plugin.name || !plugin.version) {
+          console.warn(`Skipping plugin update check due to missing data: ${JSON.stringify(plugin)}`);
+          continue;
+        }
+
+        const metadataPath = path.join(pluginsDir, `${plugin.name}.json`);
+        let installedVersion = null;
+        if (fs.existsSync(metadataPath)) {
+          try {
+            const metadataContent = fs.readFileSync(metadataPath, 'utf-8');
+            const installedMetadata = JSON.parse(metadataContent);
+            installedVersion = installedMetadata.version;
+          } catch (readError) {
+            console.error(`Error reading metadata for plugin ${plugin.name}:`, readError);
+          }
+        }
+
+        if (installedVersion && installedVersion === plugin.version) {
+          console.log(`Plugin ${plugin.name} is already up to date (version ${installedVersion}). Skipping download.`);
+          continue;
+        }
+
+        console.log(`Update found for plugin ${plugin.name}: ${plugin.version} (installed: ${installedVersion || 'N/A'}). Downloading...`);
+        const pluginFile = path.join(updatePath, `${plugin.name}-${plugin.version}.zip`);
+
+        try {
+          await this.downloadFile(plugin.url, pluginFile);
+          console.log(`Plugin update file ${plugin.name} ${plugin.version} downloaded successfully: ${pluginFile}`);
+          this.downloadedPluginUpdates.push({
+            name: plugin.name,
+            version: plugin.version,
+            filePath: pluginFile,
+            url: plugin.url
+          });
+          updatesFoundAndDownloaded = true;
+        } catch(downloadError) {
+          console.error(`Error downloading plugin update file ${plugin.name} ${plugin.version}:`, downloadError);
+        }
       }
+
+      if (!updatesFoundAndDownloaded) {
+        console.log('No new plugin versions found or failed to download.');
+      }
+
+      return updatesFoundAndDownloaded;
+
     } catch (error) {
-      console.error('Error while checking for plugin updates:', error);
+      console.error('Error checking for plugin updates:', error);
+      return false;
     }
   }
+
+
+  async installCoreUpdate(targetVersion: string, updateFile: string): Promise<boolean> {
+    console.log(`Installing core update ${targetVersion} from file ${updateFile}`);
+
+    try {
+      if (this.config.core?.backupBeforeUpdate) {
+        await this.backupCore();
+      }
+
+      const installedVersion = await this.installArchive(updateFile);
+
+      if (installedVersion && installedVersion === targetVersion) {
+        console.log(`Core version ${targetVersion} installation completed and verified successfully.`);
+        return true;
+      } else {
+        console.error(`Core installation error: installed version (${installedVersion || 'unknown'}) does not match target (${targetVersion}).`);
+        return false;
+      }
+    } catch (error) {
+      console.error(`Critical error during core update installation ${targetVersion}:`, error);
+      return false;
+    }
+  }
+
+
+  async installPluginUpdates(pluginsToInstall: { name: string; version: string; filePath: string; url: string; }[]): Promise<boolean> {
+    console.log(`Installing ${pluginsToInstall.length} plugin updates...`);
+    let atLeastOneSuccess = false;
+    const successfullyInstalledPlugins: { name: string; version: string }[] = [];
+
+    try {
+      const pluginsDir = path.join(process.cwd(), 'plugins');
+      if (!fs.existsSync(pluginsDir)) {
+        fs.mkdirSync(pluginsDir, { recursive: true });
+      }
+
+      if (this.config.plugins?.backupBeforeUpdate) {
+        await this.backupPlugins();
+      }
+
+      for (const plugin of pluginsToInstall) {
+        console.log(`Installing plugin ${plugin.name} version ${plugin.version} from file ${plugin.filePath}`);
+        const tempDir = path.join(os.tmpdir(), `plugin-update-${plugin.name}-${Date.now()}`);
+        if (!fs.existsSync(tempDir)) {
+          fs.mkdirSync(tempDir, { recursive: true });
+        }
+
+        try {
+          await new Promise<void>((resolve, reject) => {
+            const extractCmd = `unzip -o "${plugin.filePath}" -d "${tempDir}"`;
+            child_process.exec(extractCmd, (extractError) => {
+              if (extractError) {
+                console.error(`Error unzipping plugin ${plugin.name}:`, extractError);
+                fs.rm(tempDir, { recursive: true, force: true }, () => reject(extractError));
+              } else {
+                resolve();
+              }
+            });
+          });
+
+
+          await new Promise<void>((resolve, reject) => {
+
+            const copyCmd = `cp -f ${tempDir}/*.js "${pluginsDir}/" 2>/dev/null || true && cp -f ${tempDir}/*.json "${pluginsDir}/" 2>/dev/null || true`;
+            child_process.exec(copyCmd, (copyError) => {
+              if (copyError) {
+                console.warn(`Possible error copying plugin files for ${plugin.name} (continuing installation):`, copyError);
+              }
+              resolve();
+            });
+          });
+
+
+          const metadataPath = path.join(pluginsDir, `${plugin.name}.json`);
+          try {
+            if (fs.existsSync(metadataPath)) {
+              const metadataContent = fs.readFileSync(metadataPath, 'utf-8');
+              const installedMetadata = JSON.parse(metadataContent);
+              installedMetadata.version = plugin.version;
+              fs.writeFileSync(metadataPath, JSON.stringify(installedMetadata, null, 2));
+              console.log(`Metadata for plugin ${plugin.name} updated to version ${plugin.version}`);
+            } else {
+              console.warn(`Metadata file ${metadataPath} not found after installing plugin ${plugin.name}. Could not write version.`);
+            }
+          } catch (metaUpdateError) {
+            console.error(`Error updating metadata for plugin ${plugin.name}:`, metaUpdateError);
+          }
+
+
+          console.log(`Plugin ${plugin.name} successfully updated to version ${plugin.version}`);
+          successfullyInstalledPlugins.push({ name: plugin.name, version: plugin.version });
+          atLeastOneSuccess = true;
+
+        } catch (pluginInstallError) {
+          console.error(`Failed to install plugin ${plugin.name} version ${plugin.version}:`, pluginInstallError);
+          this.downloadedPluginUpdates = this.downloadedPluginUpdates.filter(p => !(p.name === plugin.name && p.version === plugin.version));
+        } finally {
+
+          fs.rm(tempDir, { recursive: true, force: true }, (rmError) => {
+            if (rmError) {
+              console.warn(`Error removing temporary directory for plugin ${plugin.name}:`, rmError);
+            }
+          });
+        }
+      }
+
+
+      this.downloadedPluginUpdates = this.downloadedPluginUpdates.filter(
+        downloaded => !successfullyInstalledPlugins.some(installed => installed.name === downloaded.name && installed.version === downloaded.version)
+      );
+
+
+    } catch (error) {
+      console.error('Error during the plugin update installation process:', error);
+      return false;
+    }
+
+    return atLeastOneSuccess;
+  }
+
 
   async cloudRequest(endpoint: string, method: string = 'GET', data: any = null) {
     try {
@@ -526,62 +813,55 @@ export const Cloud = toMixin(base => class Cloud extends base {
     }
   }
 
-  async updateCore(version: string, url: string) {
-    if (this.coreUpdateInProgress) {
-      console.log('The core update is already in progress.');
-      return;
-    }
-
-    this.coreUpdateInProgress = true;
-
-    try {
-      const updatePath = this.config.core?.updatePath || path.join(os.homedir(), '.aydo', 'updates');
-      if (!fs.existsSync(updatePath)) {
-        fs.mkdirSync(updatePath, { recursive: true });
-      }
-
-      const updateFile = path.join(updatePath, `aydo-server-${version}.zip`);
-
-      await this.downloadFile(url, updateFile);
-      if (this.config.core?.backupBeforeUpdate) {
-        await this.backupCore();
-      }
-
-
-      await this.installUpdate(updateFile);
-
-      this.coreUpdateInProgress = false;
-    } catch (error) {
-      console.log('The core update is already in progress.');
-      this.coreUpdateInProgress = false;
-    }
-  }
 
   async downloadFile(url: string, destination: string): Promise<void> {
+    console.log(`Downloading file from ${url} to ${destination}`);
+    let fileStream: fs.WriteStream | null = null;
     try {
       const response = await fetch(url);
 
-      if (!response.ok) {
-        throw new Error(`File download from ${url} error: ${response.status}`);
+      if (!response.ok || !response.body) {
+        throw new Error(`Error downloading file ${url}: ${response.status} ${response.statusText}`);
       }
 
-      const fileStream = fs.createWriteStream(destination);
-      const buffer = await response.arrayBuffer();
+      fileStream = fs.createWriteStream(destination);
+      const reader = response.body.getReader();
 
-      return new Promise((resolve, reject) => {
-        fileStream.write(Buffer.from(buffer));
-        fileStream.on('finish', () => {
-          fileStream.close();
-          resolve();
-        });
+      return new Promise(async (resolve, reject) => {
         fileStream.on('error', (error) => {
+          console.error(`Error writing to file ${destination}:`, error);
           fs.unlink(destination, () => {});
           reject(error);
         });
-        fileStream.end();
+        fileStream.on('finish', () => {
+          console.log(`File ${destination} downloaded and closed successfully.`);
+          resolve();
+        });
+
+        try {
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) {
+              break;
+            }
+            if (!fileStream.write(value)) {
+              await new Promise(resolveDrain => fileStream.once('drain', resolveDrain));
+            }
+          }
+          fileStream.end();
+        } catch (readError) {
+          console.error(`Error reading stream for ${url}:`, readError);
+          fileStream.close();
+          fs.unlink(destination, () => {});
+          reject(readError);
+        }
       });
+
     } catch (error) {
-      console.error(`File download from ${url} error:`, error);
+      console.error(`Error downloading file ${url}:`, error);
+      if (fileStream) {
+        fileStream.close();
+      }
       fs.unlink(destination, () => {});
       throw error;
     }
@@ -594,151 +874,143 @@ export const Cloud = toMixin(base => class Cloud extends base {
     }
 
     const backupFile = path.join(backupPath, `aydo-server-backup-${this.version}-${Date.now()}.zip`);
-
+    console.log(`Creating core backup at ${backupFile}`);
 
     return new Promise((resolve, reject) => {
       const workDir = process.cwd();
-      const cmd = `cd "${workDir}" && zip -r "${backupFile}" . -x "node_modules/*" "*.git*"`;
+      const excludePatterns = [
+        "node_modules/*",
+        "*.log",
+        "logs/*",
+        ".pm2/*",
+        ".git/*",
+        path.join(os.homedir(), '.aydo', 'updates', '*'),
+        path.join(os.homedir(), '.aydo', 'backups', '*'),
+        path.join(os.homedir(), '.aydo', 'plugin-updates', '*'),
+        path.join(os.homedir(), '.aydo', 'plugin-backups', '*')
+      ];
+      const excludeArgs = excludePatterns.map(p => `-x "${p}"`).join(' ');
+      const cmd = `cd "${workDir}" && zip -r "${backupFile}" . ${excludeArgs}`;
+      console.log(`Executing backup command: ${cmd}`);
 
-      child_process.exec(cmd, (error) => {
+
+      child_process.exec(cmd, (error, stdout, stderr) => {
+        if (stderr) {
+          console.warn('Warnings during backup creation:', stderr);
+        }
         if (error) {
-          console.error('Error while creating a backup', error);
+          console.error('Error creating core backup:', error);
           reject(error);
         } else {
-          console.log(`Backup created: ${backupFile}`);
+          console.log(`Core backup created successfully: ${backupFile}`);
           resolve();
         }
       });
     });
   }
 
-  async installUpdate(updateFile: string): Promise<void> {
-    console.log(`Installing update from file ${updateFile}`);
 
-    return new Promise((resolve, reject) => {
-      const workDir = process.cwd();
-      const tempDir = path.join(os.tmpdir(), `aydo-update-${Date.now()}`);
+  async installArchive(archiveFile: string): Promise<string | null> {
+    console.log(`Installing update from archive ${archiveFile}`);
+    const workDir = process.cwd();
+    const tempDir = path.join(os.tmpdir(), `aydo-install-${Date.now()}`);
 
+    try {
       if (!fs.existsSync(tempDir)) {
         fs.mkdirSync(tempDir, { recursive: true });
       }
 
-      const extractCmd = `unzip -o "${updateFile}" -d "${tempDir}"`;
-
-      child_process.exec(extractCmd, (extractError) => {
-        if (extractError) {
-          console.error('Error while extracting the update:', extractError);
-          reject(extractError);
-          return;
-        }
-
-        const copyCmd = `cp -R "${tempDir}/"* "${workDir}/"`;
-
-        child_process.exec(copyCmd, (copyError) => {
-          if (copyError) {
-            console.error('Error while copying update files:', copyError);
-            reject(copyError);
-            return;
+      console.log(`Unzipping ${archiveFile} to ${tempDir}...`);
+      await new Promise<void>((resolve, reject) => {
+        const extractCmd = `unzip -o "${archiveFile}" -d "${tempDir}"`;
+        child_process.exec(extractCmd, (extractError, stdout, stderr) => {
+          if (stderr) console.warn(`Stderr during unzip: ${stderr}`);
+          if (extractError) {
+            console.error('Error unzipping archive:', extractError);
+            reject(extractError);
+          } else {
+            console.log('Archive unzipped successfully.');
+            resolve();
           }
-
-          const installCmd = `cd "${workDir}" && npm install`;
-
-          child_process.exec(installCmd, (installError) => {
-            if (installError) {
-              console.error('Error while installing dependencies:', installError);
-              reject(installError);
-              return;
-            }
-
-
-            fs.rm(tempDir, { recursive: true, force: true }, (rmError) => {
-              if (rmError) {
-                console.warn('Error while deleting temporary directory:', rmError);
-              }
-              resolve();
-            });
-          });
         });
       });
-    });
-  }
 
-  async updatePlugins(plugins: any[]) {
-    try {
-      const updatePath = this.config.plugins?.updatePath || path.join(os.homedir(), '.aydo', 'plugin-updates');
-      if (!fs.existsSync(updatePath)) {
-        fs.mkdirSync(updatePath, { recursive: true });
-      }
+      console.log(`Copying files from ${tempDir} to ${workDir}...`);
+      await new Promise<void>((resolve, reject) => {
+        const copyCmd = `rsync -a --exclude node_modules --exclude .git "${tempDir}/" "${workDir}/"`;
+        child_process.exec(copyCmd, (copyError, stdout, stderr) => {
+          if (stderr) console.warn(`Stderr during rsync copy: ${stderr}`);
+          if (copyError) {
+            console.error('Error copying update files (rsync):', copyError);
 
-      const pluginsDir = '/srv/plugins';
-      if (!fs.existsSync(pluginsDir)) {
-        fs.mkdirSync(pluginsDir, { recursive: true });
-      }
-
-      if (this.config.plugins?.backupBeforeUpdate) {
-        await this.backupPlugins();
-      }
-
-      for (const plugin of plugins) {
-        if (!plugin.url || !plugin.name || !plugin.version) {
-          continue;
-        }
-
-        console.log(`Plugin update ${plugin.name} to version ${plugin.version}`);
-
-        const pluginFile = path.join(updatePath, `${plugin.name}-${plugin.version}.zip`);
-
-
-        await this.downloadFile(plugin.url, pluginFile);
-
-
-        const tempDir = path.join(os.tmpdir(), `plugin-update-${plugin.name}-${Date.now()}`);
-        if (!fs.existsSync(tempDir)) {
-          fs.mkdirSync(tempDir, { recursive: true });
-        }
-
-
-        await new Promise<void>((resolve, reject) => {
-          const extractCmd = `unzip -o "${pluginFile}" -d "${tempDir}"`;
-
-          child_process.exec(extractCmd, (extractError) => {
-            if (extractError) {
-              console.error(`Error while unpacking the plugiт ${plugin.name}:`, extractError);
-              reject(extractError);
-              return;
-            }
-
-            const copyCmd = `cp -f ${tempDir}/*.js ${pluginsDir}/ && cp -f ${tempDir}/*.json ${pluginsDir}/`;
-
-            child_process.exec(copyCmd, (copyError) => {
-              if (copyError) {
-                console.error(`Error while copying plugin files ${plugin.name}:`, copyError);
-                reject(copyError);
-                return;
-              }
-
-
-              fs.rm(tempDir, { recursive: true, force: true }, (rmError) => {
-                if (rmError) {
-                  console.warn(`Error while deleting the temporary directory for the plugin ${plugin.name}:`, rmError);
-                }
+            console.log('Attempting copy with cp...');
+            const fallbackCopyCmd = `cp -R "${tempDir}/"* "${workDir}/"`;
+            child_process.exec(fallbackCopyCmd, (fallbackError) => {
+              if (fallbackError) {
+                console.error('Error copying update files (cp fallback):', fallbackError);
+                reject(fallbackError);
+              } else {
+                console.log('Files copied successfully (cp fallback).');
                 resolve();
-              });
+              }
             });
-          });
+          } else {
+            console.log('Files copied successfully (rsync).');
+            resolve();
+          }
         });
+      });
 
-        console.log(`Plugin ${plugin.name} successfully updated to version ${plugin.version}`);
+      console.log(`Installing dependencies in ${workDir}...`);
+      await new Promise<void>((resolve, reject) => {
+        const installCmd = `cd "${workDir}" && npm install`;
+        child_process.exec(installCmd, { maxBuffer: 1024 * 1024 * 5 }, (installError, stdout, stderr) => {
+          if (stderr) console.warn(`Stderr during npm install: ${stderr}`);
+          if (stdout) console.log(`Stdout during npm install: ${stdout}`);
+          if (installError) {
+            console.error('Error installing dependencies (npm install):', installError);
+            reject(installError);
+          } else {
+            console.log('Dependencies installed successfully.');
+            resolve();
+          }
+        });
+      });
+
+
+      let installedVersion: string | null = null;
+      const packageJsonPath = path.join(workDir, 'package.json');
+      try {
+        const data = fs.readFileSync(packageJsonPath, 'utf8');
+        const packageJson = JSON.parse(data);
+        installedVersion = packageJson.version || null;
+        if (installedVersion) {
+          console.log(`Successfully read version from package.json after update: ${installedVersion}`);
+        } else {
+          console.warn('Could not find version in package.json after update.');
+        }
+      } catch (readErr) {
+        console.error('Error reading or parsing package.json after update:', readErr);
       }
+
+      return installedVersion;
 
     } catch (error) {
-      console.error('Error while updating plugins', error);
+      console.error(`Error during installation from archive ${archiveFile}:`, error);
+      throw error;
+    } finally {
+      console.log(`Cleaning up temporary directory ${tempDir}...`);
+      fs.rm(tempDir, { recursive: true, force: true }, (rmError) => {
+        if (rmError) {
+          console.warn('Error removing temporary installation directory:', rmError);
+        }
+      });
     }
   }
 
 
   async backupPlugins(): Promise<void> {
-    console.log('Creating a backup of plugins');
+    console.log('Creating plugin backup');
 
     const backupPath = path.join(os.homedir(), '.aydo', 'plugin-backups');
     if (!fs.existsSync(backupPath)) {
@@ -746,26 +1018,31 @@ export const Cloud = toMixin(base => class Cloud extends base {
     }
 
     const backupFile = path.join(backupPath, `plugins-backup-${Date.now()}.zip`);
-    const pluginsDir = '/srv/plugins';
+    const pluginsDir = path.join(process.cwd(), 'plugins');
 
     return new Promise<void>((resolve, reject) => {
       if (!fs.existsSync(pluginsDir)) {
-        console.log('Plugin directory not found, skipping backup');
+        console.log('Plugins directory not found, skipping backup.');
         resolve();
         return;
       }
 
       const cmd = `cd "${pluginsDir}" && zip -r "${backupFile}" .`;
+      console.log(`Executing plugin backup command: ${cmd}`);
 
-      child_process.exec(cmd, (error) => {
+      child_process.exec(cmd, (error, stdout, stderr) => {
+        if (stderr) {
+          console.warn('Warnings during plugin backup creation:', stderr);
+        }
         if (error) {
-          console.error('Error while creating a backup of plugins:', error);
+          console.error('Error creating plugin backup:', error);
           reject(error);
         } else {
-          console.log(`Plugin backup created: ${backupFile}`);
+          console.log(`Plugin backup created successfully: ${backupFile}`);
           resolve();
         }
       });
     });
   }
+
 });
