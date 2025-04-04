@@ -69,8 +69,6 @@ export const Dynamic = toMixin(parent => class Dynamic extends parent {
           let device = spawn(moduleName.command, moduleName.args, options);
           this.processId = device.pid;
           const logModuleName = `${this.driver_module_name}-${this.id}`;
-          console.log(device.stderr);
-          console.log(device.stdout);
           if (device.stdout) {
             device.stdout.on('data', (data) => {
               const data1 = removeLast(data.toString());
@@ -123,10 +121,6 @@ export const Dynamic = toMixin(parent => class Dynamic extends parent {
               }, 5000);
             }
           });
-          device.on('error', (err) => {
-            console.log('*********DEVICE ERROR**********');
-            console.log(err.message);
-          });
           setTimeout(() => {
             if (device) {
               resolve(device);
@@ -151,13 +145,9 @@ export const Dynamic = toMixin(parent => class Dynamic extends parent {
 
   updateConfig() {
     // super.updateConfig();
-    console.log('***************UPDATE CONFIG****************')
-    console.log(this.ident);
-    console.log(this.identifier);
     if (!this.pluginSubDevice && this.device && (!this.getParam('external_driver') || this.getParam('external_driver_ssh_host'))) {
       this.killTimeout = setTimeout(() => {
         this.app.log(`${this.ident} updateConfig`);
-        console.log('***************KILL DEVICE****************')
         this.device.kill();
         this.app.lastAutoUpdateStates = this.app.lastAutoUpdateStates || {};
         this.app.lastAutoUpdateStates[this.ident] = null;
