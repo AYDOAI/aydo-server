@@ -478,7 +478,6 @@ export const Cloud = toMixin(base => class Cloud extends base {
         console.log('No core updates found or downloaded.');
       }
 
-
       if (pluginCheckResult && this.downloadedPluginUpdates.length > 0) {
         console.log(`Found ${this.downloadedPluginUpdates.length} plugin updates. Attempting installation...`);
         const pluginInstallSuccess = await this.installPluginUpdates(this.downloadedPluginUpdates);
@@ -498,8 +497,6 @@ export const Cloud = toMixin(base => class Cloud extends base {
       } else {
         console.log('No plugin updates found or downloaded.');
       }
-
-
 
       if (restartNeeded) {
         console.log('Updates installed, restarting server in 1 second...');
@@ -523,7 +520,6 @@ export const Cloud = toMixin(base => class Cloud extends base {
     }
   }
 
-
   async checkForCoreUpdate(): Promise<boolean> {
     console.log('Checking for core updates...');
 
@@ -534,6 +530,8 @@ export const Cloud = toMixin(base => class Cloud extends base {
 
     try {
       const response = await this.cloudRequest('/backend/v2/components/latest');
+      console.log('Latest components:');
+      console.log(response);
 
       if (!response || !response.version) {
         console.log('Failed to get core version information.');
