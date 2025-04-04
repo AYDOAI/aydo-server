@@ -69,20 +69,26 @@ export const Dynamic = toMixin(parent => class Dynamic extends parent {
           let device = spawn(moduleName.command, moduleName.args, options);
           this.processId = device.pid;
           const logModuleName = `${this.driver_module_name}-${this.id}`;
-          device.stdout.on('data', (data) => {
-            const data1 = removeLast(data.toString());
-            this.app.log(logModuleName, data1);
-            if (this.app.config.log.console === true) {
-              console.log(logModuleName, data1);
-            }
-          });
-          device.stderr.on('data', (data) => {
-            const data1 = removeLast(data.toString());
-            this.app.error(logModuleName, data1);
-            if (this.app.config.log.console === true) {
-              console.log(logModuleName, data1);
-            }
-          });
+          console.log(device.stderr);
+          console.log(device.stdout);
+          if (device.stdout) {
+            device.stdout.on('data', (data) => {
+              const data1 = removeLast(data.toString());
+              this.app.log(logModuleName, data1);
+              if (this.app.config.log.console === true) {
+                console.log(logModuleName, data1);
+              }
+            });
+          }
+          if (device.stderr) {
+            device.stderr.on('data', (data) => {
+              const data1 = removeLast(data.toString());
+              this.app.error(logModuleName, data1);
+              if (this.app.config.log.console === true) {
+                console.log(logModuleName, data1);
+              }
+            });
+          }
           device.on('close', (code) => {
             this.app.log(`${logModuleName}: close (${code})`);
             device = null;
