@@ -12,6 +12,8 @@ export class RequireEx {
     'bonjour': {version: '^3.5.0', required: true},
     'sequelize': {version: '^6.36.0', required: true},
     'sqlite3': {version: '^5.1.7', required: true},
+    'ejs': {version: '^3.1.10', required: true},
+    'qrcode': {version: '^1.5.4', required: true},
   };
 
   // @ts-ignore
