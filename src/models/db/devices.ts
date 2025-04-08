@@ -43,6 +43,7 @@ export class Devices extends BaseModel {
       setup_required: {
         type: app.Sequelize.DataTypes.BOOLEAN,
         allowNull: true,
+        defaultValue: true
       },
     }, {
       underscored: true,
