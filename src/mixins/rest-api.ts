@@ -40,7 +40,7 @@ export const RestApi = toMixin(base => class RestApi extends base {
     this.express.set('view engine', 'ejs');
     this.express.engine('ejs', ejs.__express);
 
-    const isProd = process.env.NODE_ENV === 'prod';
+    const isProd = process.env.NODE_ENV === 'production';
     if (isProd) {
       this.express.set('views', path.join(process.cwd(), 'views'));
       this.express.use(express.static(path.join(process.cwd(), 'public')));
