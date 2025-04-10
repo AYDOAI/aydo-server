@@ -5,6 +5,7 @@ import * as https from 'https';
 import * as bodyParser from 'body-parser';
 import * as cors from 'cors';
 import * as path from 'path';
+import "ejs";
 
 import {AppOptions} from '../app';
 import {toMixin} from '../../lib/foibles';
