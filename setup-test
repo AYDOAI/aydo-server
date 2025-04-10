@@ -186,6 +186,8 @@ else
   cp ./dist/server.js /srv/
   cp -R ./dist/public/ /srv
   cp -R ./dist/views/ /srv
+  mkdir -p /srv/src
+  cp -R ./dist/views/ /srv/src/
   cp ./package.json /srv/
   cp -R ./node_modules/ /srv
   cp -R ./migrations/ /srv
