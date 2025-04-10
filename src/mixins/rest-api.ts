@@ -5,7 +5,7 @@ import * as https from 'https';
 import * as bodyParser from 'body-parser';
 import * as cors from 'cors';
 import * as path from 'path';
-import "ejs";
+import * as ejs from "ejs";
 
 import {AppOptions} from '../app';
 import {toMixin} from '../../lib/foibles';
@@ -37,6 +37,7 @@ export const RestApi = toMixin(base => class RestApi extends base {
     this.express.use(cors());
     this.express.options('*', cors());
     this.express.set('view engine', 'ejs');
+    this.express.engine('ejs', ejs.__express);
     this.express.set('views', path.join(__dirname, '..', 'views'));
     this.express.use(express.static(path.join(__dirname, '..', '..', 'public')));
 
