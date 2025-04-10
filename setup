@@ -183,7 +183,7 @@ if [ $CODE != 0 ]; then
   echo "Build error $CODE"
   exit $CODE
 else
-  cp ./server.js /srv/
+  cp ./dist/server.js /srv/
   cp ./package.json /srv/
   cp -R ./node_modules/ /srv
   cp -R ./migrations/ /srv
