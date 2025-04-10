@@ -11,6 +11,7 @@ import {AppOptions} from '../app';
 import {toMixin} from '../../lib/foibles';
 import {EventTypes} from '../models/event-types';
 import routes from '../routes/routes';
+import * as process from "node:process";
 
 export const RestApi = toMixin(base => class RestApi extends base {
 
@@ -38,8 +39,15 @@ export const RestApi = toMixin(base => class RestApi extends base {
     this.express.options('*', cors());
     this.express.set('view engine', 'ejs');
     this.express.engine('ejs', ejs.__express);
-    this.express.set('views', path.join(__dirname, '..', 'views'));
-    this.express.use(express.static(path.join(__dirname, '..', '..', 'public')));
+
+    const isProd = process.env.NODE_ENV === 'prod';
+    if (isProd) {
+      this.express.set('views', path.join(process.cwd(), 'views'));
+      this.express.use(express.static(path.join(process.cwd(), 'public')));
+    } else {
+      this.express.set('views', path.join(__dirname, '..', 'views'));
+      this.express.use(express.static(path.join(__dirname, '..', '..', 'public')));
+    }
 
     const ports = [80, 8080, 8000, 8888];
     let portIndex = 0;
