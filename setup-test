@@ -184,6 +184,8 @@ if [ $CODE != 0 ]; then
   exit $CODE
 else
   cp ./dist/server.js /srv/
+  cp ./dist/public/ /srv/public
+  cp ./dist/views/ /srv/views
   cp ./package.json /srv/
   cp -R ./node_modules/ /srv
   cp -R ./migrations/ /srv
