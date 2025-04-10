@@ -44,7 +44,7 @@ export const Cloud = toMixin(base => class Cloud extends base {
   coreUpdateUrl = null;
   coreUpdateDownloadedPath: string | null = null;
   pendingPluginUpdates: any[] | null = null;
-  downloadedPluginUpdates: { name: string; version: string; filePath: string; url: string; }[] = [];
+  downloadedPluginUpdates: {name: string; version: string; filePath: string; url: string;}[] = [];
 
   get url() {
     return this.config.cloud && this.config.cloud.url ? this.config.cloud.url : 'https://cloud.aydo.ai';
@@ -136,9 +136,9 @@ export const Cloud = toMixin(base => class Cloud extends base {
           break;
         case 'add_zone':
           this.newZone(1, data.body).then((body) => {
-            this.ws.emit('response', { id, body });
+            this.ws.emit('response', {id, body});
           }).catch(error => {
-            this.ws.emit('response', { id, error });
+            this.ws.emit('response', {id, error});
           });
           break;
         case 'device_command':
@@ -209,7 +209,7 @@ export const Cloud = toMixin(base => class Cloud extends base {
   }
 
   updateDeviceState(ident: string, state: boolean) {
-    this.ws.emit('update_device_state', { ident, state });
+    this.ws.emit('update_device_state', {ident, state});
   }
 
   async registerDrivers(force = false) {
@@ -290,7 +290,7 @@ export const Cloud = toMixin(base => class Cloud extends base {
         settings: [],
         isOnline: device?.current_status?.connected,
         setupRequired: driver.class_name === 'zigbee2mqtt.subdevice' &&
-            (device.db_device.setup_required !== undefined ? device.db_device.setup_required : true)
+          (device.db_device.setup_required !== undefined ? device.db_device.setup_required : true)
       };
 
       console.log(opts);
@@ -466,7 +466,7 @@ export const Cloud = toMixin(base => class Cloud extends base {
         if (coreInstallSuccess) {
           console.log(`Core update to version ${this.coreUpdateVersion} installed successfully.`);
           restartNeeded = true;
-          this.ws.emit('installed_component', { core: true, version: this.coreUpdateVersion });
+          this.ws.emit('installed_component', {core: true, version: this.coreUpdateVersion});
           this.coreUpdateAvailable = false;
           this.coreUpdateVersion = null;
           this.coreUpdateUrl = null;
@@ -485,7 +485,7 @@ export const Cloud = toMixin(base => class Cloud extends base {
           console.log('Plugin updates installed successfully.');
           restartNeeded = true;
           this.downloadedPluginUpdates.forEach(plugin => {
-            this.ws.emit('installed_component', { plugin: plugin.name, version: plugin.version });
+            this.ws.emit('installed_component', {plugin: plugin.name, version: plugin.version});
           });
 
           this.pendingPluginUpdates = null;
@@ -547,7 +547,7 @@ export const Cloud = toMixin(base => class Cloud extends base {
 
         const updatePath = this.config.core?.updatePath || path.join(os.homedir(), '.aydo', 'updates');
         if (!fs.existsSync(updatePath)) {
-          fs.mkdirSync(updatePath, { recursive: true });
+          fs.mkdirSync(updatePath, {recursive: true});
         }
         const updateFile = path.join(updatePath, `aydo-server-${this.coreUpdateVersion}.zip`);
 
@@ -602,13 +602,17 @@ export const Cloud = toMixin(base => class Cloud extends base {
 
       this.pendingPluginUpdates = response.plugins;
 
-      const pluginsDir = path.join(process.cwd(), 'plugins');
+      let pluginsDir = path.join(process.cwd(), '');
+      if (this.config.plugins?.path) {
+        pluginsDir = path.join(this.config.plugins?.path);
+      }
+      
       const updatePath = this.config.plugins?.updatePath || path.join(os.homedir(), '.aydo', 'plugin-updates');
       if (!fs.existsSync(updatePath)) {
-        fs.mkdirSync(updatePath, { recursive: true });
+        fs.mkdirSync(updatePath, {recursive: true});
       }
       if (!fs.existsSync(pluginsDir)) {
-        fs.mkdirSync(pluginsDir, { recursive: true });
+        fs.mkdirSync(pluginsDir, {recursive: true});
       }
 
 
@@ -648,7 +652,7 @@ export const Cloud = toMixin(base => class Cloud extends base {
             url: plugin.url
           });
           updatesFoundAndDownloaded = true;
-        } catch(downloadError) {
+        } catch (downloadError) {
           console.error(`Error downloading plugin update file ${plugin.name} ${plugin.version}:`, downloadError);
         }
       }
@@ -690,15 +694,19 @@ export const Cloud = toMixin(base => class Cloud extends base {
   }
 
 
-  async installPluginUpdates(pluginsToInstall: { name: string; version: string; filePath: string; url: string; }[]): Promise<boolean> {
+  async installPluginUpdates(pluginsToInstall: {name: string; version: string; filePath: string; url: string;}[]): Promise<boolean> {
     console.log(`Installing ${pluginsToInstall.length} plugin updates...`);
     let atLeastOneSuccess = false;
-    const successfullyInstalledPlugins: { name: string; version: string }[] = [];
+    const successfullyInstalledPlugins: {name: string; version: string}[] = [];
 
     try {
-      const pluginsDir = path.join(process.cwd(), 'plugins');
+      let pluginsDir = path.join(process.cwd(), 'plugins');
+      if (this.config.plugins?.path) {
+        pluginsDir = path.join(this.config.plugins?.path);
+      }
+
       if (!fs.existsSync(pluginsDir)) {
-        fs.mkdirSync(pluginsDir, { recursive: true });
+        fs.mkdirSync(pluginsDir, {recursive: true});
       }
 
       if (this.config.plugins?.backupBeforeUpdate) {
@@ -709,7 +717,7 @@ export const Cloud = toMixin(base => class Cloud extends base {
         console.log(`Installing plugin ${plugin.name} version ${plugin.version} from file ${plugin.filePath}`);
         const tempDir = path.join(os.tmpdir(), `plugin-update-${plugin.name}-${Date.now()}`);
         if (!fs.existsSync(tempDir)) {
-          fs.mkdirSync(tempDir, { recursive: true });
+          fs.mkdirSync(tempDir, {recursive: true});
         }
 
         try {
@@ -718,7 +726,7 @@ export const Cloud = toMixin(base => class Cloud extends base {
             child_process.exec(extractCmd, (extractError) => {
               if (extractError) {
                 console.error(`Error unzipping plugin ${plugin.name}:`, extractError);
-                fs.rm(tempDir, { recursive: true, force: true }, () => reject(extractError));
+                fs.rm(tempDir, {recursive: true, force: true}, () => reject(extractError));
               } else {
                 resolve();
               }
@@ -755,7 +763,7 @@ export const Cloud = toMixin(base => class Cloud extends base {
 
 
           console.log(`Plugin ${plugin.name} successfully updated to version ${plugin.version}`);
-          successfullyInstalledPlugins.push({ name: plugin.name, version: plugin.version });
+          successfullyInstalledPlugins.push({name: plugin.name, version: plugin.version});
           atLeastOneSuccess = true;
 
         } catch (pluginInstallError) {
@@ -763,7 +771,7 @@ export const Cloud = toMixin(base => class Cloud extends base {
           this.downloadedPluginUpdates = this.downloadedPluginUpdates.filter(p => !(p.name === plugin.name && p.version === plugin.version));
         } finally {
 
-          fs.rm(tempDir, { recursive: true, force: true }, (rmError) => {
+          fs.rm(tempDir, {recursive: true, force: true}, (rmError) => {
             if (rmError) {
               console.warn(`Error removing temporary directory for plugin ${plugin.name}:`, rmError);
             }
@@ -828,7 +836,7 @@ export const Cloud = toMixin(base => class Cloud extends base {
       return new Promise(async (resolve, reject) => {
         fileStream.on('error', (error) => {
           console.error(`Error writing to file ${destination}:`, error);
-          fs.unlink(destination, () => {});
+          fs.unlink(destination, () => { });
           reject(error);
         });
         fileStream.on('finish', () => {
@@ -838,7 +846,7 @@ export const Cloud = toMixin(base => class Cloud extends base {
 
         try {
           while (true) {
-            const { done, value } = await reader.read();
+            const {done, value} = await reader.read();
             if (done) {
               break;
             }
@@ -850,7 +858,7 @@ export const Cloud = toMixin(base => class Cloud extends base {
         } catch (readError) {
           console.error(`Error reading stream for ${url}:`, readError);
           fileStream.close();
-          fs.unlink(destination, () => {});
+          fs.unlink(destination, () => { });
           reject(readError);
         }
       });
@@ -860,7 +868,7 @@ export const Cloud = toMixin(base => class Cloud extends base {
       if (fileStream) {
         fileStream.close();
       }
-      fs.unlink(destination, () => {});
+      fs.unlink(destination, () => { });
       throw error;
     }
   }
@@ -868,7 +876,7 @@ export const Cloud = toMixin(base => class Cloud extends base {
   async backupCore(): Promise<void> {
     const backupPath = path.join(os.homedir(), '.aydo', 'backups');
     if (!fs.existsSync(backupPath)) {
-      fs.mkdirSync(backupPath, { recursive: true });
+      fs.mkdirSync(backupPath, {recursive: true});
     }
 
     const backupFile = path.join(backupPath, `aydo-server-backup-${this.version}-${Date.now()}.zip`);
@@ -915,7 +923,7 @@ export const Cloud = toMixin(base => class Cloud extends base {
 
     try {
       if (!fs.existsSync(tempDir)) {
-        fs.mkdirSync(tempDir, { recursive: true });
+        fs.mkdirSync(tempDir, {recursive: true});
       }
 
       console.log(`Unzipping ${archiveFile} to ${tempDir}...`);
@@ -962,7 +970,7 @@ export const Cloud = toMixin(base => class Cloud extends base {
       console.log(`Installing dependencies in ${workDir}...`);
       await new Promise<void>((resolve, reject) => {
         const installCmd = `cd "${workDir}" && npm install`;
-        child_process.exec(installCmd, { maxBuffer: 1024 * 1024 * 5 }, (installError, stdout, stderr) => {
+        child_process.exec(installCmd, {maxBuffer: 1024 * 1024 * 5}, (installError, stdout, stderr) => {
           if (stderr) console.warn(`Stderr during npm install: ${stderr}`);
           if (stdout) console.log(`Stdout during npm install: ${stdout}`);
           if (installError) {
@@ -998,7 +1006,7 @@ export const Cloud = toMixin(base => class Cloud extends base {
       throw error;
     } finally {
       console.log(`Cleaning up temporary directory ${tempDir}...`);
-      fs.rm(tempDir, { recursive: true, force: true }, (rmError) => {
+      fs.rm(tempDir, {recursive: true, force: true}, (rmError) => {
         if (rmError) {
           console.warn('Error removing temporary installation directory:', rmError);
         }
@@ -1012,7 +1020,7 @@ export const Cloud = toMixin(base => class Cloud extends base {
 
     const backupPath = path.join(os.homedir(), '.aydo', 'plugin-backups');
     if (!fs.existsSync(backupPath)) {
-      fs.mkdirSync(backupPath, { recursive: true });
+      fs.mkdirSync(backupPath, {recursive: true});
     }
 
     const backupFile = path.join(backupPath, `plugins-backup-${Date.now()}.zip`);

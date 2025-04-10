@@ -27,4 +27,7 @@ export interface ConfigFile {
     backupBeforeUpdate: boolean;
     updatePath?: string;
   };
+  plugins?: {
+    path: string;
+  };
 }

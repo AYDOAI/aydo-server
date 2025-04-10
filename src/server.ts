@@ -9,11 +9,29 @@ const {Umzug, SequelizeStorage} = require('umzug');
 const child_process = require('child_process');
 
 const path = require('path');
-const configDir = path.join(os.homedir(), '.aydo', 'server').replace(/\\/g, '/');
 
+const configDir = path.join(os.homedir(), '.aydo', 'server').replace(/\\/g, '/');
 try {
   if (!fs.existsSync(configDir)) {
     fs.mkdirSync(configDir, {recursive: true});
+  }
+} catch (e) {
+  console.error(e)
+}
+
+const pluginsDir = path.join(os.homedir(), '.aydo', 'server', 'plugins').replace(/\\/g, '/');
+try {
+  if (!fs.existsSync(pluginsDir)) {
+    fs.mkdirSync(pluginsDir, {recursive: true});
+  }
+} catch (e) {
+  console.error(e)
+}
+
+const logsDir = path.join(os.homedir(), '.aydo', 'server', 'logs').replace(/\\/g, '/');
+try {
+  if (!fs.existsSync(logsDir)) {
+    fs.mkdirSync(logsDir, {recursive: true});
   }
 } catch (e) {
   console.error(e)
@@ -30,7 +48,7 @@ const updateConfig = () => {
 try {
   config = eval(`require('${configPath}')`);
 } catch (e) {
-  console.error(e);
+  console.log('Configuration file not found. Creating a default configuration file.');
   config = {
     port: 80,
     mdnsPort: 89,
@@ -46,7 +64,7 @@ try {
     identifier: '',
     token: '',
     log: {
-      path: './logs',
+      path: `${logsDir}`,
     },
     capability: {
       threshold: 10000
@@ -55,7 +73,10 @@ try {
       autoUpdate: false,
       updateOnStart: true,
       backupBeforeUpdate: true
-    }
+    },
+    plugins: {
+      path: `${pluginsDir}`,
+    },
   };
   updateConfig();
 }

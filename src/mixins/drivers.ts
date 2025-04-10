@@ -52,7 +52,12 @@ export const Drivers = toMixin(base => class Drivers extends base {
   get _drivers() {
     const drivers = {};
     const path = require('path');
-    const pluginsPath = path.join(process.cwd(), 'plugins').replace(/\\/g, '/');
+
+    let pluginsPath = path.join(process.cwd(), 'plugins').replace(/\\/g, '/');
+    if (this.config.plugins?.path) {
+      pluginsPath = path.join(this.config.plugins?.path);
+    }
+
     if (fs.existsSync(pluginsPath)) {
       const files = fs.readdirSync(pluginsPath);
       files.forEach(file => {

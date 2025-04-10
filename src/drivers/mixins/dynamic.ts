@@ -40,20 +40,28 @@ export const Dynamic = toMixin(parent => class Dynamic extends parent {
             stdio: 'inherit'
           };
 
-          const names: any = [{
-            filename: path.join(process.cwd(), `../plugins/${this.driver_module_name}/dist/src/${this.driver_module_name}.js`),
-            command: 'node',
-            directory: path.join(process.cwd(), `../plugins/${this.driver_module_name}/dist/src/`),
-            args: [path.join(process.cwd(), `../plugins/${this.driver_module_name}/dist/src/${this.driver_module_name}.js`), id]
-          }, {
-            filename: this.app.moduleName(`./plugins/${this.driver_module_name}.js`),
-            command: 'node',
-            args: [this.app.moduleName(`./plugins/${this.driver_module_name}.js`), id]
-          }, {
-            filename: this.app.moduleName(`./plugins/${this.driver_module_name}`),
-            command: this.app.moduleName(`./plugins/${this.driver_module_name}`),
-            args: [id]
-          }];
+          let pluginsDir = path.join(process.cwd(), 'plugins');
+          if (this.app.config.plugins?.path) {
+            pluginsDir = path.join(this.app.config.plugins?.path);
+          }
+
+          const names: any = [
+            {
+              filename: path.join(process.cwd(), pluginsDir, `${this.driver_module_name}/dist/src/${this.driver_module_name}.js`),
+              command: 'node',
+              directory: path.join(process.cwd(), pluginsDir, `${this.driver_module_name}/dist/src/`),
+              args: [path.join(process.cwd(), pluginsDir, `${this.driver_module_name}/dist/src/${this.driver_module_name}.js`), id]
+            }, {
+              filename: path.join(pluginsDir, `${this.driver_module_name}.js`),
+              command: 'node',
+              args: [path.join(pluginsDir, `${this.driver_module_name}.js`), id]
+            }, {
+              filename: path.join(pluginsDir, this.driver_module_name),
+              command: path.join(pluginsDir, this.driver_module_name),
+              args: [id]
+            }
+          ];
+
           names.forEach(name => {
             if (!moduleName && fs.existsSync(name.filename)) {
               moduleName = name;
