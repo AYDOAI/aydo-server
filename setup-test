@@ -176,7 +176,7 @@ npm install || exit 1
 npm install zigbee-herdsman || exit 1
 npm install zigbee-herdsman-converters || exit 1
 echo "Compiling AYDO core"
-npm run webpack || exit 1
+NODE_ENV=production npm run webpack || exit 1
 
 CODE=$?
 if [ $CODE != 0 ]; then
