@@ -72,7 +72,7 @@ try {
     core: {
       autoUpdate: false,
       updateOnStart: true,
-      backupBeforeUpdate: true
+      backupBeforeUpdate: false
     },
     plugins: {
       path: `${pluginsDir}`,
