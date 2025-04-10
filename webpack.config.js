@@ -1,5 +1,6 @@
 const path = require('path');
 const CopyWebpackPlugin = require('copy-webpack-plugin');
+const webpack = require('webpack');
 
 module.exports = {
   entry: {
@@ -53,6 +54,9 @@ module.exports = {
         { from: 'public', to: "./public"},
       ],
     }),
+    new webpack.DefinePlugin({
+      'process.env.NODE_ENV': JSON.stringify('prod')
+    })
   ],
   output: {
     filename: '[name].js',
