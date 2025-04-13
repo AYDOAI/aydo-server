@@ -226,6 +226,7 @@ export const Cloud = toMixin(base => class Cloud extends base {
           parentClassName: driver.parent_class_name,
           icon: driver.icon,
           name: driver.driver_name,
+          description: driver.description,
           driverId: driver.driver_id,
           type: driver.driver_type,
           settings: driver.driver_settings
