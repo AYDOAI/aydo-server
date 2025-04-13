@@ -5,11 +5,13 @@ import * as https from 'https';
 import * as bodyParser from 'body-parser';
 import * as cors from 'cors';
 import * as path from 'path';
+import * as ejs from "ejs";
 
 import {AppOptions} from '../app';
 import {toMixin} from '../../lib/foibles';
 import {EventTypes} from '../models/event-types';
 import routes from '../routes/routes';
+import * as process from "node:process";
 
 export const RestApi = toMixin(base => class RestApi extends base {
 
@@ -36,8 +38,16 @@ export const RestApi = toMixin(base => class RestApi extends base {
     this.express.use(cors());
     this.express.options('*', cors());
     this.express.set('view engine', 'ejs');
-    this.express.set('views', path.join(__dirname, '..', 'views'));
-    this.express.use(express.static(path.join(__dirname, '..', '..', 'public')));
+    this.express.engine('ejs', ejs.__express);
+
+    const isProd = process.env.NODE_ENV === 'production';
+    if (isProd) {
+      this.express.set('views', path.join(process.cwd(), 'views'));
+      this.express.use(express.static(path.join(process.cwd(), 'public')));
+    } else {
+      this.express.set('views', path.join(__dirname, '..', 'views'));
+      this.express.use(express.static(path.join(__dirname, '..', '..', 'public')));
+    }
 
     const ports = [80, 8080, 8000, 8888];
     let portIndex = 0;
