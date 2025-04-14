@@ -896,21 +896,38 @@ export const Cloud = toMixin(base => class Cloud extends base {
         path.join(os.homedir(), '.aydo', 'plugin-updates', '*'),
         path.join(os.homedir(), '.aydo', 'plugin-backups', '*')
       ];
-      const excludeArgs = excludePatterns.map(p => `-x "${p}"`).join(' ');
-      const cmd = `cd "${workDir}" && zip -r "${backupFile}" . ${excludeArgs}`;
-      console.log(`Executing backup command: ${cmd}`);
+      const zipArgs = ['-r', backupFile, '.'];
+      excludePatterns.forEach(p => zipArgs.push('-x', p));
 
+      console.log(`Executing backup command: zip ${zipArgs.join(' ')} in ${workDir}`);
 
-      child_process.exec(cmd, (error, stdout, stderr) => {
-        if (stderr) {
-          console.warn('Warnings during backup creation:', stderr);
-        }
-        if (error) {
-          console.error('Error creating core backup:', error);
-          reject(error);
-        } else {
+      const zipProcess = child_process.spawn('zip', zipArgs, {
+        cwd: workDir,
+        stdio: ['ignore', 'pipe', 'pipe']
+      });
+
+      let stderrOutput = '';
+      zipProcess.stderr.on('data', (data) => {
+        stderrOutput += data.toString();
+        console.warn('Backup stderr:', data.toString());
+      });
+
+      zipProcess.on('error', (error) => {
+        console.error('Error spawning backup process:', error);
+        reject(error);
+      });
+
+      zipProcess.on('close', (code) => {
+        if (code === 0) {
+          if (stderrOutput) {
+             console.warn('Warnings during backup creation:', stderrOutput);
+          }
           console.log(`Core backup created successfully: ${backupFile}`);
           resolve();
+        } else {
+          const error = new Error(`Backup process exited with code ${code}. Stderr: ${stderrOutput || 'N/A'}`);
+          console.error('Error creating core backup:', error);
+          reject(error);
         }
       });
     });
