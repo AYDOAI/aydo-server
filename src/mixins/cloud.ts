@@ -603,10 +603,7 @@ export const Cloud = toMixin(base => class Cloud extends base {
 
       this.pendingPluginUpdates = response.plugins;
 
-      let pluginsDir = path.join(process.cwd(), '');
-      if (this.config.plugins?.path) {
-        pluginsDir = path.join(this.config.plugins?.path);
-      }
+      const pluginsDir = this.config.plugins?.path || path.join(os.homedir(), '.aydo', 'server', 'plugins').replace(/\\/g, '/');
       
       const updatePath = this.config.plugins?.updatePath || path.join(os.homedir(), '.aydo', 'plugin-updates');
       if (!fs.existsSync(updatePath)) {
@@ -701,10 +698,7 @@ export const Cloud = toMixin(base => class Cloud extends base {
     const successfullyInstalledPlugins: {name: string; version: string}[] = [];
 
     try {
-      let pluginsDir = path.join(process.cwd(), 'plugins');
-      if (this.config.plugins?.path) {
-        pluginsDir = path.join(this.config.plugins?.path);
-      }
+      const pluginsDir = this.config.plugins?.path || path.join(os.homedir(), '.aydo', 'server', 'plugins').replace(/\\/g, '/');
 
       if (!fs.existsSync(pluginsDir)) {
         fs.mkdirSync(pluginsDir, {recursive: true});
@@ -1025,7 +1019,7 @@ export const Cloud = toMixin(base => class Cloud extends base {
     }
 
     const backupFile = path.join(backupPath, `plugins-backup-${Date.now()}.zip`);
-    const pluginsDir = path.join(process.cwd(), 'plugins');
+    const pluginsDir = this.config.plugins?.path || path.join(os.homedir(), '.aydo', 'server', 'plugins').replace(/\\/g, '/');
 
     return new Promise<void>((resolve, reject) => {
       if (!fs.existsSync(pluginsDir)) {
