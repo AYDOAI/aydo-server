@@ -122,48 +122,48 @@ fi
 
 # Mediamtx plugin ---------------------------------------------------------------------------------
 
-echo "Cloning mediamtx plugin"
-mkdir -p /srv/code/mediamtx
-git clone --depth 1 --branch AYDO-main https://github.com/AYDOAI/aydo-plugin-mediamtx.git /srv/code/mediamtx
+# echo "Cloning mediamtx plugin"
+# mkdir -p /srv/code/mediamtx
+# git clone --depth 1 --branch AYDO-main https://github.com/AYDOAI/aydo-plugin-mediamtx.git /srv/code/mediamtx
 
-cd /srv/code/mediamtx
+# cd /srv/code/mediamtx
 
-echo "Installing mediamtx plugin dependencies"
-npm install || exit 1
-echo "Compiling mediamtx plugin"
-npm run build || exit 1
+# echo "Installing mediamtx plugin dependencies"
+# npm install || exit 1
+# echo "Compiling mediamtx plugin"
+# npm run build || exit 1
 
-CODE=$?
-if [ $CODE != 0 ]; then
-  echo "Build error $CODE"
-  exit $CODE
-else
-  cp ./dist/*.js /srv/plugins
-  cp ./src/*.json /srv/plugins
-  cp ./config/config.json /srv/config/mediamtx.json
-fi
+# CODE=$?
+# if [ $CODE != 0 ]; then
+#   echo "Build error $CODE"
+#   exit $CODE
+# else
+#   cp ./dist/*.js /srv/plugins
+#   cp ./src/*.json /srv/plugins
+#   cp ./config/config.json /srv/config/mediamtx.json
+# fi
 
 # Myst plugin -------------------------------------------------------------------------------------
 
-echo "Cloning myst plugin"
-mkdir -p /srv/code/myst
-git clone --depth 1 --branch AYDO-main https://github.com/AYDOAI/aydo-plugin-myst.git /srv/code/myst
+# echo "Cloning myst plugin"
+# mkdir -p /srv/code/myst
+# git clone --depth 1 --branch AYDO-main https://github.com/AYDOAI/aydo-plugin-myst.git /srv/code/myst
 
-cd /srv/code/myst
+# cd /srv/code/myst
 
-echo "Installing myst plugin dependencies"
-npm install || exit 1
-echo "Compiling myst plugin"
-npm run build || exit 1
+# echo "Installing myst plugin dependencies"
+# npm install || exit 1
+# echo "Compiling myst plugin"
+# npm run build || exit 1
 
-CODE=$?
-if [ $CODE != 0 ]; then
-  echo "Build error $CODE"
-  exit $CODE
-else
-  cp ./dist/*.js /srv/plugins
-  cp ./src/*.json /srv/plugins
-fi
+# CODE=$?
+# if [ $CODE != 0 ]; then
+#   echo "Build error $CODE"
+#   exit $CODE
+# else
+#   cp ./dist/*.js /srv/plugins
+#   cp ./src/*.json /srv/plugins
+# fi
 
 # AYDO core ---------------------------------------------------------------------------------------
 
@@ -197,6 +197,7 @@ After=network.target
 [Service]
 ExecStart=/usr/local/bin/node /srv/server.js
 WorkingDirectory=/srv
+Environment=NODE_PATH=/srv/node_modules
 StandardOutput=inherit
 StandardError=inherit
 Restart=always
