@@ -201,6 +201,7 @@ After=network.target
 [Service]
 ExecStart=/usr/local/bin/node /srv/server.js
 WorkingDirectory=/srv
+Environment=NODE_PATH=/srv/node_modules
 StandardOutput=inherit
 StandardError=inherit
 Restart=always
