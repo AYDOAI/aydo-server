@@ -607,7 +607,6 @@ export const Cloud = toMixin(base => class Cloud extends base {
       this.pendingPluginUpdates = response.plugins;
 
       const pluginsDir = this.config.plugins?.path || path.join(os.homedir(), '.aydo', 'server', 'plugins').replace(/\\/g, '/');
-
       const updatePath = this.config.plugins?.updatePath || path.join(os.homedir(), '.aydo', 'plugin-updates');
       if (!fs.existsSync(updatePath)) {
         fs.mkdirSync(updatePath, {recursive: true});
@@ -615,7 +614,6 @@ export const Cloud = toMixin(base => class Cloud extends base {
       if (!fs.existsSync(pluginsDir)) {
         fs.mkdirSync(pluginsDir, {recursive: true});
       }
-
 
       for (const plugin of this.pendingPluginUpdates) {
         if (!plugin.url || !plugin.name || !plugin.version) {
