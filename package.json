@@ -14,10 +14,13 @@
   "author": "AYDO Team",
   "license": "ISC",
   "dependencies": {
+    "archiver": "^7.0.1",
     "bonjour": "^3.5.0",
     "cors": "^2.8.5",
     "ejs": "^3.1.10",
     "express": "^4.18.2",
+    "extract-zip": "^2.0.1",
+    "fs-extra": "^11.3.0",
     "jsonwebtoken": "^9.0.2",
     "lodash": "^4.17.21",
     "mqtt": "4.3.7",
@@ -37,6 +40,9 @@
     "zigbee2mqtt-frontend": "0.7.6"
   },
   "devDependencies": {
+    "@types/archiver": "^6.0.3",
+    "@types/extract-zip": "^2.0.0",
+    "@types/fs-extra": "^11.0.4",
     "@types/lodash": "^4.17.16",
     "@types/node": "^20.11.16",
     "copy-webpack-plugin": "^13.0.0",
