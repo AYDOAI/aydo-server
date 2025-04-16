@@ -5,7 +5,10 @@ import {EventTypes} from '../models/event-types';
 import {DbTables} from '../models/db-tables';
 import * as path from 'path';
 import * as fs from 'fs';
-import * as child_process from 'child_process';
+import * as archiver from 'archiver';
+import * as extract from 'extract-zip';
+import * as fse from 'fs-extra';
+import { exec } from 'child_process';
 
 const io = require('socket.io-client');
 
@@ -201,7 +204,7 @@ export const Cloud = toMixin(base => class Cloud extends base {
     const updateThreshold = this.config.capability?.threshold || 10000;
 
     if (!this.deviceCapabilitiesLastUpdate ||
-      (currentTime - this.deviceCapabilitiesLastUpdate) > updateThreshold) {
+        (currentTime - this.deviceCapabilitiesLastUpdate) > updateThreshold) {
       this.ws.emit('update_device_capabilities', this.deviceCapabilities);
       this.deviceCapabilities = [];
       this.deviceCapabilitiesLastUpdate = currentTime;
@@ -291,7 +294,7 @@ export const Cloud = toMixin(base => class Cloud extends base {
         settings: [],
         isOnline: device?.current_status?.connected,
         setupRequired: driver.class_name === 'zigbee2mqtt.subdevice' &&
-          (device.db_device.setup_required !== undefined ? device.db_device.setup_required : true)
+            (device.db_device.setup_required !== undefined ? device.db_device.setup_required : true)
       };
 
       console.log(opts);
@@ -603,11 +606,7 @@ export const Cloud = toMixin(base => class Cloud extends base {
 
       this.pendingPluginUpdates = response.plugins;
 
-      let pluginsDir = path.join(process.cwd(), '');
-      if (this.config.plugins?.path) {
-        pluginsDir = path.join(this.config.plugins?.path);
-      }
-      
+      const pluginsDir = this.config.plugins?.path || path.join(os.homedir(), '.aydo', 'server', 'plugins').replace(/\\/g, '/');
       const updatePath = this.config.plugins?.updatePath || path.join(os.homedir(), '.aydo', 'plugin-updates');
       if (!fs.existsSync(updatePath)) {
         fs.mkdirSync(updatePath, {recursive: true});
@@ -615,7 +614,6 @@ export const Cloud = toMixin(base => class Cloud extends base {
       if (!fs.existsSync(pluginsDir)) {
         fs.mkdirSync(pluginsDir, {recursive: true});
       }
-
 
       for (const plugin of this.pendingPluginUpdates) {
         if (!plugin.url || !plugin.name || !plugin.version) {
@@ -701,10 +699,7 @@ export const Cloud = toMixin(base => class Cloud extends base {
     const successfullyInstalledPlugins: {name: string; version: string}[] = [];
 
     try {
-      let pluginsDir = path.join(process.cwd(), 'plugins');
-      if (this.config.plugins?.path) {
-        pluginsDir = path.join(this.config.plugins?.path);
-      }
+      const pluginsDir = this.config.plugins?.path || path.join(os.homedir(), '.aydo', 'server', 'plugins').replace(/\\/g, '/');
 
       if (!fs.existsSync(pluginsDir)) {
         fs.mkdirSync(pluginsDir, {recursive: true});
@@ -722,30 +717,17 @@ export const Cloud = toMixin(base => class Cloud extends base {
         }
 
         try {
-          await new Promise<void>((resolve, reject) => {
-            const extractCmd = `unzip -o "${plugin.filePath}" -d "${tempDir}"`;
-            child_process.exec(extractCmd, (extractError) => {
-              if (extractError) {
-                console.error(`Error unzipping plugin ${plugin.name}:`, extractError);
-                fs.rm(tempDir, {recursive: true, force: true}, () => reject(extractError));
-              } else {
-                resolve();
-              }
-            });
-          });
+          await extract(plugin.filePath, { dir: tempDir });
 
+          const jsFiles = fse.readdirSync(tempDir).filter(file => file.endsWith('.js'));
+          for (const jsFile of jsFiles) {
+            await fse.copy(path.join(tempDir, jsFile), path.join(pluginsDir, jsFile));
+          }
 
-          await new Promise<void>((resolve, reject) => {
-
-            const copyCmd = `cp -f ${tempDir}/*.js "${pluginsDir}/" 2>/dev/null || true && cp -f ${tempDir}/*.json "${pluginsDir}/" 2>/dev/null || true`;
-            child_process.exec(copyCmd, (copyError) => {
-              if (copyError) {
-                console.warn(`Possible error copying plugin files for ${plugin.name} (continuing installation):`, copyError);
-              }
-              resolve();
-            });
-          });
-
+          const jsonFiles = fse.readdirSync(tempDir).filter(file => file.endsWith('.json'));
+          for (const jsonFile of jsonFiles) {
+            await fse.copy(path.join(tempDir, jsonFile), path.join(pluginsDir, jsonFile));
+          }
 
           const metadataPath = path.join(pluginsDir, `${plugin.name}.json`);
           try {
@@ -762,7 +744,6 @@ export const Cloud = toMixin(base => class Cloud extends base {
             console.error(`Error updating metadata for plugin ${plugin.name}:`, metaUpdateError);
           }
 
-
           console.log(`Plugin ${plugin.name} successfully updated to version ${plugin.version}`);
           successfullyInstalledPlugins.push({name: plugin.name, version: plugin.version});
           atLeastOneSuccess = true;
@@ -771,20 +752,15 @@ export const Cloud = toMixin(base => class Cloud extends base {
           console.error(`Failed to install plugin ${plugin.name} version ${plugin.version}:`, pluginInstallError);
           this.downloadedPluginUpdates = this.downloadedPluginUpdates.filter(p => !(p.name === plugin.name && p.version === plugin.version));
         } finally {
-
-          fs.rm(tempDir, {recursive: true, force: true}, (rmError) => {
-            if (rmError) {
-              console.warn(`Error removing temporary directory for plugin ${plugin.name}:`, rmError);
-            }
+          await fse.remove(tempDir).catch(rmError => {
+            console.warn(`Error removing temporary directory for plugin ${plugin.name}:`, rmError);
           });
         }
       }
 
-
       this.downloadedPluginUpdates = this.downloadedPluginUpdates.filter(
-        downloaded => !successfullyInstalledPlugins.some(installed => installed.name === downloaded.name && installed.version === downloaded.version)
+          downloaded => !successfullyInstalledPlugins.some(installed => installed.name === downloaded.name && installed.version === downloaded.version)
       );
-
 
     } catch (error) {
       console.error('Error during the plugin update installation process:', error);
@@ -885,6 +861,33 @@ export const Cloud = toMixin(base => class Cloud extends base {
 
     return new Promise((resolve, reject) => {
       const workDir = process.cwd();
+
+      const output = fs.createWriteStream(backupFile);
+      const archive = archiver('zip', {
+        zlib: { level: 9 }
+      });
+
+      output.on('close', () => {
+        console.log(`Core backup created successfully: ${backupFile} (${archive.pointer()} total bytes)`);
+        resolve();
+      });
+
+      archive.on('warning', (err) => {
+        if (err.code === 'ENOENT') {
+          console.warn('Archive warning:', err);
+        } else {
+          console.error('Archive error:', err);
+          reject(err);
+        }
+      });
+
+      archive.on('error', (err) => {
+        console.error('Archive error:', err);
+        reject(err);
+      });
+
+      archive.pipe(output);
+
       const excludePatterns = [
         "node_modules/*",
         "*.log",
@@ -896,23 +899,38 @@ export const Cloud = toMixin(base => class Cloud extends base {
         path.join(os.homedir(), '.aydo', 'plugin-updates', '*'),
         path.join(os.homedir(), '.aydo', 'plugin-backups', '*')
       ];
-      const excludeArgs = excludePatterns.map(p => `-x "${p}"`).join(' ');
-      const cmd = `cd "${workDir}" && zip -r "${backupFile}" . ${excludeArgs}`;
-      console.log(`Executing backup command: ${cmd}`);
 
+      const addFilesToArchive = (dir: string, baseDir: string) => {
+        const files = fs.readdirSync(dir);
+        for (const file of files) {
+          const filePath = path.join(dir, file);
+          const relativePath = path.relative(baseDir, filePath);
 
-      child_process.exec(cmd, (error, stdout, stderr) => {
-        if (stderr) {
-          console.warn('Warnings during backup creation:', stderr);
+          if (excludePatterns.some(pattern => {
+            if (pattern.endsWith('*')) {
+              return relativePath.startsWith(pattern.slice(0, -1));
+            }
+            return pattern === relativePath;
+          })) {
+            continue;
+          }
+
+          const stat = fs.statSync(filePath);
+          if (stat.isDirectory()) {
+            addFilesToArchive(filePath, baseDir);
+          } else {
+            archive.file(filePath, { name: relativePath });
+          }
         }
-        if (error) {
-          console.error('Error creating core backup:', error);
-          reject(error);
-        } else {
-          console.log(`Core backup created successfully: ${backupFile}`);
-          resolve();
-        }
-      });
+      };
+
+      try {
+        addFilesToArchive(workDir, workDir);
+        archive.finalize();
+      } catch (error) {
+        console.error('Error creating core backup:', error);
+        reject(error);
+      }
     });
   }
 
@@ -928,50 +946,23 @@ export const Cloud = toMixin(base => class Cloud extends base {
       }
 
       console.log(`Unzipping ${archiveFile} to ${tempDir}...`);
-      await new Promise<void>((resolve, reject) => {
-        const extractCmd = `unzip -o "${archiveFile}" -d "${tempDir}"`;
-        child_process.exec(extractCmd, (extractError, stdout, stderr) => {
-          if (stderr) console.warn(`Stderr during unzip: ${stderr}`);
-          if (extractError) {
-            console.error('Error unzipping archive:', extractError);
-            reject(extractError);
-          } else {
-            console.log('Archive unzipped successfully.');
-            resolve();
-          }
-        });
-      });
+      await extract(archiveFile, { dir: tempDir });
+      console.log('Archive unzipped successfully.');
 
       console.log(`Copying files from ${tempDir} to ${workDir}...`);
-      await new Promise<void>((resolve, reject) => {
-        const copyCmd = `rsync -a --exclude node_modules --exclude .git "${tempDir}/" "${workDir}/"`;
-        child_process.exec(copyCmd, (copyError, stdout, stderr) => {
-          if (stderr) console.warn(`Stderr during rsync copy: ${stderr}`);
-          if (copyError) {
-            console.error('Error copying update files (rsync):', copyError);
+      const copyOptions = {
+        filter: (src: string) => {
+          const relativePath = path.relative(tempDir, src);
+          return !['node_modules', '.git'].includes(relativePath);
+        }
+      };
 
-            console.log('Attempting copy with cp...');
-            const fallbackCopyCmd = `cp -R "${tempDir}/"* "${workDir}/"`;
-            child_process.exec(fallbackCopyCmd, (fallbackError) => {
-              if (fallbackError) {
-                console.error('Error copying update files (cp fallback):', fallbackError);
-                reject(fallbackError);
-              } else {
-                console.log('Files copied successfully (cp fallback).');
-                resolve();
-              }
-            });
-          } else {
-            console.log('Files copied successfully (rsync).');
-            resolve();
-          }
-        });
-      });
+      await fse.copy(tempDir, workDir, copyOptions);
+      console.log('Files copied successfully.');
 
       console.log(`Installing dependencies in ${workDir}...`);
       await new Promise<void>((resolve, reject) => {
-        const installCmd = `cd "${workDir}" && npm install`;
-        child_process.exec(installCmd, {maxBuffer: 1024 * 1024 * 5}, (installError, stdout, stderr) => {
+        exec(`cd "${workDir}" && npm install`, {maxBuffer: 1024 * 1024 * 5}, (installError, stdout, stderr) => {
           if (stderr) console.warn(`Stderr during npm install: ${stderr}`);
           if (stdout) console.log(`Stdout during npm install: ${stdout}`);
           if (installError) {
@@ -983,7 +974,6 @@ export const Cloud = toMixin(base => class Cloud extends base {
           }
         });
       });
-
 
       let installedVersion: string | null = null;
       const packageJsonPath = path.join(workDir, 'package.json');
@@ -1007,10 +997,8 @@ export const Cloud = toMixin(base => class Cloud extends base {
       throw error;
     } finally {
       console.log(`Cleaning up temporary directory ${tempDir}...`);
-      fs.rm(tempDir, {recursive: true, force: true}, (rmError) => {
-        if (rmError) {
-          console.warn('Error removing temporary installation directory:', rmError);
-        }
+      await fse.remove(tempDir).catch(rmError => {
+        console.warn('Error removing temporary installation directory:', rmError);
       });
     }
   }
@@ -1025,7 +1013,7 @@ export const Cloud = toMixin(base => class Cloud extends base {
     }
 
     const backupFile = path.join(backupPath, `plugins-backup-${Date.now()}.zip`);
-    const pluginsDir = path.join(process.cwd(), 'plugins');
+    const pluginsDir = this.config.plugins?.path || path.join(os.homedir(), '.aydo', 'server', 'plugins').replace(/\\/g, '/');
 
     return new Promise<void>((resolve, reject) => {
       if (!fs.existsSync(pluginsDir)) {
@@ -1034,21 +1022,54 @@ export const Cloud = toMixin(base => class Cloud extends base {
         return;
       }
 
-      const cmd = `cd "${pluginsDir}" && zip -r "${backupFile}" .`;
-      console.log(`Executing plugin backup command: ${cmd}`);
+      try {
+        const output = fs.createWriteStream(backupFile);
+        const archive = archiver('zip', {
+          zlib: { level: 9 }
+        });
 
-      child_process.exec(cmd, (error, stdout, stderr) => {
-        if (stderr) {
-          console.warn('Warnings during plugin backup creation:', stderr);
-        }
-        if (error) {
-          console.error('Error creating plugin backup:', error);
-          reject(error);
-        } else {
-          console.log(`Plugin backup created successfully: ${backupFile}`);
+        output.on('close', () => {
+          console.log(`Plugin backup created successfully: ${backupFile} (${archive.pointer()} total bytes)`);
           resolve();
-        }
-      });
+        });
+
+        archive.on('warning', (err) => {
+          if (err.code === 'ENOENT') {
+            console.warn('Archive warning:', err);
+          } else {
+            console.error('Archive error:', err);
+            reject(err);
+          }
+        });
+
+        archive.on('error', (err) => {
+          console.error('Archive error:', err);
+          reject(err);
+        });
+
+        archive.pipe(output);
+
+        const addFilesToArchive = (dir: string, baseDir: string) => {
+          const files = fs.readdirSync(dir);
+          for (const file of files) {
+            const filePath = path.join(dir, file);
+            const relativePath = path.relative(baseDir, filePath);
+            const stat = fs.statSync(filePath);
+
+            if (stat.isDirectory()) {
+              addFilesToArchive(filePath, baseDir);
+            } else {
+              archive.file(filePath, { name: relativePath });
+            }
+          }
+        };
+
+        addFilesToArchive(pluginsDir, pluginsDir);
+        archive.finalize();
+      } catch (error) {
+        console.error('Error creating plugin backup:', error);
+        reject(error);
+      }
     });
   }
 
