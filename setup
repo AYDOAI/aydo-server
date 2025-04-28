@@ -98,28 +98,6 @@ mkdir -p /srv/config
 mkdir -p /srv/code/server
 mkdir -p /srv/plugins
 
-# Zigbee2mqtt plugin ------------------------------------------------------------------------------
-
-echo "Cloning zigbee2mqtt plugin"
-mkdir -p /srv/code/zigbee2mqtt
-git clone --depth 1 --branch AYDO-main https://github.com/AYDOAI/aydo-plugin-zigbee2mqtt.git /srv/code/zigbee2mqtt
-
-cd /srv/code/zigbee2mqtt
-
-echo "Installing zigbee2mqtt plugin dependencies"
-npm install || exit 1
-echo "Compiling zigbee2mqtt plugin"
-npm run build || exit 1
-
-CODE=$?
-if [ $CODE != 0 ]; then
-  echo "Build error $CODE"
-  exit $CODE
-else
-  cp ./dist/*.js /srv/plugins
-  cp ./src/*.json /srv/plugins
-fi
-
 # Mediamtx plugin ---------------------------------------------------------------------------------
 
 # echo "Cloning mediamtx plugin"
@@ -184,8 +162,10 @@ if [ $CODE != 0 ]; then
   exit $CODE
 else
   cp ./dist/server.js /srv/
-  cp ./dist/public/ /srv/public
-  cp ./dist/views/ /srv/views
+  cp -R ./dist/public/ /srv
+  cp -R ./dist/views/ /srv
+  mkdir -p /srv/src
+  cp -R ./dist/views/ /srv/src/
   cp ./package.json /srv/
   cp -R ./node_modules/ /srv
   cp -R ./migrations/ /srv
