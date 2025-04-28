@@ -100,25 +100,25 @@ mkdir -p /srv/plugins
 
 # Zigbee2mqtt plugin ------------------------------------------------------------------------------
 
-echo "Cloning zigbee2mqtt plugin"
-mkdir -p /srv/code/zigbee2mqtt
-git clone --depth 1 --branch AYDO-test https://github.com/AYDOAI/aydo-plugin-zigbee2mqtt.git /srv/code/zigbee2mqtt
+# echo "Cloning zigbee2mqtt plugin"
+# mkdir -p /srv/code/zigbee2mqtt
+# git clone --depth 1 --branch AYDO-test https://github.com/AYDOAI/aydo-plugin-zigbee2mqtt.git /srv/code/zigbee2mqtt
 
-cd /srv/code/zigbee2mqtt
+# cd /srv/code/zigbee2mqtt
 
-echo "Installing zigbee2mqtt plugin dependencies"
-npm install || exit 1
-echo "Compiling zigbee2mqtt plugin"
-npm run build || exit 1
+# echo "Installing zigbee2mqtt plugin dependencies"
+# npm install || exit 1
+# echo "Compiling zigbee2mqtt plugin"
+# npm run build || exit 1
 
-CODE=$?
-if [ $CODE != 0 ]; then
-  echo "Build error $CODE"
-  exit $CODE
-else
-  cp ./dist/*.js /srv/plugins
-  cp ./src/*.json /srv/plugins
-fi
+# CODE=$?
+# if [ $CODE != 0 ]; then
+#   echo "Build error $CODE"
+#   exit $CODE
+# else
+#   cp ./dist/*.js /srv/plugins
+#   cp ./src/*.json /srv/plugins
+# fi
 
 # Mediamtx plugin ---------------------------------------------------------------------------------
 
@@ -176,14 +176,18 @@ npm install || exit 1
 npm install zigbee-herdsman || exit 1
 npm install zigbee-herdsman-converters || exit 1
 echo "Compiling AYDO core"
-npm run webpack || exit 1
+NODE_ENV=production npm run webpack || exit 1
 
 CODE=$?
 if [ $CODE != 0 ]; then
   echo "Build error $CODE"
   exit $CODE
 else
-  cp ./server.js /srv/
+  cp ./dist/server.js /srv/
+  cp -R ./dist/public/ /srv
+  cp -R ./dist/views/ /srv
+  mkdir -p /srv/src
+  cp -R ./dist/views/ /srv/src/
   cp ./package.json /srv/
   cp -R ./node_modules/ /srv
   cp -R ./migrations/ /srv

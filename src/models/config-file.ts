@@ -17,5 +17,17 @@ export interface ConfigFile {
   token: string;
   log: {
     path: string;
-  }
+  },
+  capability: {
+    threshold: 10000
+  };
+  core?: {
+    autoUpdate: boolean;
+    updateOnStart: boolean;
+    backupBeforeUpdate: boolean;
+    updatePath?: string;
+  };
+  plugins?: {
+    path: string;
+  };
 }

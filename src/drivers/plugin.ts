@@ -224,6 +224,10 @@ export class Plugin extends BaseDriver.with(Connect2, Dynamic) {
             }, 5000);
           }
 
+          else if (key === 'connected') {
+            this.app.updateDeviceState(this.ident, status[key]);
+          }
+
           //     this.setParam(key, status[key]);
           //     this.saveDeviceParams();
           //   } else if (key === 'update_settings') {

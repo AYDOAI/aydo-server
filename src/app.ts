@@ -1,4 +1,5 @@
 import * as path from 'path';
+import * as fs from 'fs';
 
 import * as BetterQueue from '../lib/better-queue/queue';
 
@@ -50,12 +51,20 @@ export interface AppOptions {
 
 // @ts-ignore
 export class App extends Base.with(Config, Database, Emitter, Log, RestApi, Drivers, Devices, IPC, Cloud) {
-  version = '3.0.0';
+  version: string;
   requireEx: RequireEx;
   subDeviceTimeouts = {};
   bonjour: any;
 
   load(options: AppOptions) {
+    fs.readFile('./package.json', 'utf8', (err, data) => {
+      if (err) {
+        console.error('Error reading package.json:', err);
+        return;
+      }
+      this.version = JSON.parse(data).version;
+    });
+
     this.requireEx = options.requireEx;
     this.controllers = new Controllers(this);
 
@@ -474,6 +483,31 @@ export class App extends Base.with(Config, Database, Emitter, Log, RestApi, Driv
     });
   }
 
+  destroyGateway(){
+    return new Promise(async (resolve, reject) => {
+      try {
+        for (const key in this.devices) {
+          const device = this.devices[key];
+          if (device) {
+            await device.deleteDeviceEx();
+          }
+        }
+
+        await this.destroyItem(DbTables.DeviceCapabilities);
+        await this.destroyItem(DbTables.DeviceSettings);
+        await this.destroyItem(DbTables.Devices);
+
+        setTimeout(() => {
+          this.terminate();
+          this.restart();
+        }, 1000);
+        resolve(undefined);
+      } catch (error) {
+        reject(error);
+      }
+    });
+  }
+
   newZone(user_id: number, body: any) {
     return new Promise((resolve, reject) => {
       const driver = this.findDriverByClassName(body.class_name);
@@ -502,6 +536,7 @@ export class App extends Base.with(Config, Database, Emitter, Log, RestApi, Driv
         const body = {
           name: data.device_name,
           zone_id: data.zone_id,
+          setup_required: false
         }
         this.updateItem(DbTables.Devices, body, {
           id: device.id,
@@ -538,10 +573,10 @@ export class App extends Base.with(Config, Database, Emitter, Log, RestApi, Driv
     });
   }
 
-  restart() {
+  restart(code?: number) {
     clearTimeout(this.restartTimeout);
     this.restartTimeout = setTimeout(() => {
-      process.exit();
+      process.exit(code);
     }, 10000);
   }
 

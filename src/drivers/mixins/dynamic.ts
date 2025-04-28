@@ -40,20 +40,28 @@ export const Dynamic = toMixin(parent => class Dynamic extends parent {
             stdio: 'inherit'
           };
 
-          const names: any = [{
-            filename: path.join(process.cwd(), `../plugins/${this.driver_module_name}/dist/src/${this.driver_module_name}.js`),
-            command: 'node',
-            directory: path.join(process.cwd(), `../plugins/${this.driver_module_name}/dist/src/`),
-            args: [path.join(process.cwd(), `../plugins/${this.driver_module_name}/dist/src/${this.driver_module_name}.js`), id]
-          }, {
-            filename: this.app.moduleName(`./plugins/${this.driver_module_name}.js`),
-            command: 'node',
-            args: [this.app.moduleName(`./plugins/${this.driver_module_name}.js`), id]
-          }, {
-            filename: this.app.moduleName(`./plugins/${this.driver_module_name}`),
-            command: this.app.moduleName(`./plugins/${this.driver_module_name}`),
-            args: [id]
-          }];
+          let pluginsDir = path.join(process.cwd(), 'plugins');
+          if (this.app.config.plugins?.path) {
+            pluginsDir = path.join(this.app.config.plugins?.path);
+          }
+
+          const names: any = [
+            {
+              filename: path.join(process.cwd(), pluginsDir, `${this.driver_module_name}/dist/src/${this.driver_module_name}.js`),
+              command: 'node',
+              directory: path.join(process.cwd(), pluginsDir, `${this.driver_module_name}/dist/src/`),
+              args: [path.join(process.cwd(), pluginsDir, `${this.driver_module_name}/dist/src/${this.driver_module_name}.js`), id]
+            }, {
+              filename: path.join(pluginsDir, `${this.driver_module_name}.js`),
+              command: 'node',
+              args: [path.join(pluginsDir, `${this.driver_module_name}.js`), id]
+            }, {
+              filename: path.join(pluginsDir, this.driver_module_name),
+              command: path.join(pluginsDir, this.driver_module_name),
+              args: [id]
+            }
+          ];
+
           names.forEach(name => {
             if (!moduleName && fs.existsSync(name.filename)) {
               moduleName = name;
@@ -69,20 +77,24 @@ export const Dynamic = toMixin(parent => class Dynamic extends parent {
           let device = spawn(moduleName.command, moduleName.args, options);
           this.processId = device.pid;
           const logModuleName = `${this.driver_module_name}-${this.id}`;
-          device.stdout.on('data', (data) => {
-            const data1 = removeLast(data.toString());
-            this.app.log(logModuleName, data1);
-            if (this.app.config.log.console === true) {
-              console.log(logModuleName, data1);
-            }
-          });
-          device.stderr.on('data', (data) => {
-            const data1 = removeLast(data.toString());
-            this.app.error(logModuleName, data1);
-            if (this.app.config.log.console === true) {
-              console.log(logModuleName, data1);
-            }
-          });
+          if (device.stdout) {
+            device.stdout.on('data', (data) => {
+              const data1 = removeLast(data.toString());
+              this.app.log(logModuleName, data1);
+              if (this.app.config.log.console === true) {
+                console.log(logModuleName, data1);
+              }
+            });
+          }
+          if (device.stderr) {
+            device.stderr.on('data', (data) => {
+              const data1 = removeLast(data.toString());
+              this.app.error(logModuleName, data1);
+              if (this.app.config.log.console === true) {
+                console.log(logModuleName, data1);
+              }
+            });
+          }
           device.on('close', (code) => {
             this.app.log(`${logModuleName}: close (${code})`);
             device = null;
@@ -109,10 +121,12 @@ export const Dynamic = toMixin(parent => class Dynamic extends parent {
             if (!this.app.terminating && !this.disabled && this.app.devices[this.ident] && restart) {
               delete this.device;
               this._connectionState = 0;
-              this.startServer();
               setTimeout(() => {
-                this.app.addConnectQueue(this.initMethod ? this.initMethod : 'init', this.app.devices[this.ident], true);
-              }, 3000);
+                this.startServer();
+                setTimeout(() => {
+                  this.app.addConnectQueue(this.initMethod ? this.initMethod : 'init', this.app.devices[this.ident], true);
+                }, 3000);
+              }, 5000);
             }
           });
           setTimeout(() => {
@@ -143,6 +157,7 @@ export const Dynamic = toMixin(parent => class Dynamic extends parent {
       this.killTimeout = setTimeout(() => {
         this.app.log(`${this.ident} updateConfig`);
         this.device.kill();
+        this.app.lastAutoUpdateStates = this.app.lastAutoUpdateStates || {};
         this.app.lastAutoUpdateStates[this.ident] = null;
       }, 3000);
       const disabled = this.disabled;

@@ -1,4 +1,6 @@
 const path = require('path');
+const CopyWebpackPlugin = require('copy-webpack-plugin');
+const webpack = require('webpack');
 
 module.exports = {
   entry: {
@@ -14,7 +16,7 @@ module.exports = {
       if (['assert', 'buffer', 'child_process', 'curve25519-n2', 'crypto', 'dgram', 'decimal.js', 'ed25519', 'events',
         'fast-srp-hap', 'fs', 'getmac', 'http', 'mdns', 'mqtt', 'net', 'noble', 'noble-mac', 'os', 'path', 'sequelize',
         'sodium', 'tls', 'url', 'util', 'uws', 'zigbee-herdsman', 'modbus-serial', 'openzwave-shared', 'serialport',
-        'socket.io', 'ws', 'socket.io-client', 'hap-nodejs', 'serialport'
+        'socket.io', 'ws', 'socket.io-client', 'hap-nodejs', 'serialport', 'ejs'
       ].indexOf(request) !== -1) {
         return callback(null, `require('${request}')`);
       } else if (request.indexOf('../config/config') !== -1) {
@@ -45,8 +47,19 @@ module.exports = {
   resolve: {
     extensions: ['.tsx', '.ts', '.js']
   },
+  plugins: [
+    new CopyWebpackPlugin({
+      patterns: [
+        { from: 'src/views', to: "./views"},
+        { from: 'public', to: "./public"},
+      ],
+    }),
+    new webpack.DefinePlugin({
+      'process.env.NODE_ENV': JSON.stringify('production')
+    })
+  ],
   output: {
     filename: '[name].js',
-    path: path.resolve(__dirname, './')
+    path: path.resolve(__dirname, './dist')
   }
 };

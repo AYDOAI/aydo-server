@@ -279,6 +279,23 @@ export const Database = toMixin(base => class Database extends base {
     });
   }
 
+  destroyItem(table: DbTables, where: object = {}) {
+    return new Promise((resolve, reject) => {
+      this.models[table].destroy({ where }).then(() => {
+        this.database[table].items = this.database[table].items.filter(item => {
+          if (Object.keys(where).every(key => item[key] === where[key])) {
+            return false;
+          }
+          return true;
+        });
+        resolve(undefined);
+      })
+      .catch(error => {
+          reject(error);
+        });
+    })
+  }
+
 
   updateFields(row, fields) {
     Object.keys(fields).forEach(itemKey => {
