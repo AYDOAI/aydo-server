@@ -45,15 +45,17 @@ export const Dynamic = toMixin(parent => class Dynamic extends parent {
             pluginsDir = path.join(this.app.config.plugins?.path);
           }
 
+          const nodeBinary = process.execPath;
+
           const names: any = [
             {
               filename: path.join(process.cwd(), pluginsDir, `${this.driver_module_name}/dist/src/${this.driver_module_name}.js`),
-              command: 'node',
+              command: nodeBinary,
               directory: path.join(process.cwd(), pluginsDir, `${this.driver_module_name}/dist/src/`),
               args: [path.join(process.cwd(), pluginsDir, `${this.driver_module_name}/dist/src/${this.driver_module_name}.js`), id]
             }, {
               filename: path.join(pluginsDir, `${this.driver_module_name}.js`),
-              command: 'node',
+              command: nodeBinary,
               args: [path.join(pluginsDir, `${this.driver_module_name}.js`), id]
             }, {
               filename: path.join(pluginsDir, this.driver_module_name),
