@@ -470,18 +470,19 @@ export const IPC = toMixin(parent => class IPC extends parent {
 
     const modules = [
     ];
+    const nodeBinary = process.execPath;
     const dir = this.applicationPath(__dirname, true);
     modules.forEach(filename => {
       let moduleName;
       const names = [{
         ident: filename,
         filename: `${dir}/dist/${filename}.js`,
-        command: 'node',
+        command: nodeBinary,
         args: [`${dir}/dist/${filename}.js`]
       }, {
         ident: filename,
         filename: `${dir}/${filename}.js`,
-        command: 'node',
+        command: nodeBinary,
         args: [`${dir}/${filename}.js`]
       }, {
         ident: filename,
