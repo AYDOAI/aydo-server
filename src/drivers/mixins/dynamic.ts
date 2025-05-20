@@ -47,6 +47,10 @@ export const Dynamic = toMixin(parent => class Dynamic extends parent {
 
           const nodeBinary = process.execPath;
 
+          process.env.NODE_PATH = path.join(process.cwd(), 'node_modules');
+          console.log('Aydo Server NODE_PATH: ', process.env.NODE_PATH);
+          require('module').Module._initPaths();
+
           const names: any = [
             {
               filename: path.join(process.cwd(), pluginsDir, `${this.driver_module_name}/dist/src/${this.driver_module_name}.js`),
