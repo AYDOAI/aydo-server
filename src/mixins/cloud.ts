@@ -50,7 +50,7 @@ export const Cloud = toMixin(base => class Cloud extends base {
   downloadedPluginUpdates: {name: string; version: string; filePath: string; url: string;}[] = [];
 
   get url() {
-    return this.config.cloud && this.config.cloud.url ? this.config.cloud.url : 'https://cloud.aydo.ai';
+     return 'https://cloud.aydo.ai';
   }
 
   get active() {
@@ -78,7 +78,7 @@ export const Cloud = toMixin(base => class Cloud extends base {
     }
 
     const registerGateway = async () => {
-      const timezoneSettings = await this.getAvailableTimeZones();
+      const timezoneSettings = {};
       this.ws.emit('register_gateway', {
         server_id: this.identifier,
         token: this.token,

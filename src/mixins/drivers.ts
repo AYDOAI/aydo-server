@@ -5,6 +5,9 @@ import {toMixin} from '../../lib/foibles';
 import {EventTypes} from '../models/event-types';
 import {Plugin} from '../drivers/plugin';
 import {DbTables} from '../models/db-tables';
+import {cond} from "lodash";
+import {request} from "express";
+
 
 export const Drivers = toMixin(base => class Drivers extends base {
 
@@ -54,12 +57,15 @@ export const Drivers = toMixin(base => class Drivers extends base {
     const path = require('path');
 
     let pluginsPath = path.join(process.cwd(), 'plugins').replace(/\\/g, '/');
+
     if (this.config.plugins?.path) {
       pluginsPath = path.join(this.config.plugins?.path);
     }
-
+    console.log(pluginsPath);
     if (fs.existsSync(pluginsPath)) {
+
       const files = fs.readdirSync(pluginsPath);
+      console.log(files);
       files.forEach(file => {
         if (path.extname(file) === '.json') {
           try {
@@ -74,18 +80,37 @@ export const Drivers = toMixin(base => class Drivers extends base {
                   this._templates[sub_device.class_name] = template;
                 });
               }
-            }
+              console.log("succes"); }
           } catch (e) {
             this.error('getDrivers', e);
+            console.log(e)
           }
         }
       });
     }
+
     return drivers;
   }
 
-  loadTemplate(path, file) {
-    return eval(`require('${path}/${file}')`);
+  // loadTemplate(path, file) {
+  //   console.log(path)
+  //   console.log(file)
+  //   return eval(`require('${path}/${file}')`);
+  // }
+
+  // loadTemplate(templatePath: string, file: string) {
+  //   const path = require("path")
+  //   const fullPath = path.join(templatePath, file);
+  //   console.log('🔧 Full path:', fullPath);
+  //   return require(fullPath);
+  // }
+  loadTemplate(templatePath: string, file: string) {
+    const fullPath = path.join(templatePath, file);
+    const content = fs.readFileSync(fullPath, 'utf8');
+    return JSON.parse(content);
   }
+
+
+
 
 });
