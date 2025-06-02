@@ -324,4 +324,35 @@ export class Plugin extends BaseDriver.with(Connect2, Dynamic) {
     });
   }
 
+  discover(params: any) {
+    return new Promise((resolve, reject) => {
+      const tempId = `discover-${Date.now()}`;
+      
+      this.startServerEx(tempId, false).then((process) => {
+        const timeout = setTimeout(() => {
+          if (process && process.pid) {
+            process.kill('SIGTERM');
+          }
+          reject({message: 'Discover timeout'});
+        }, 30000);
+
+        this.app.request(`driver-${tempId}`, 'discover', params).then((result) => {
+          clearTimeout(timeout);
+          if (process && process.pid) {
+            process.kill('SIGTERM');
+          }
+          resolve(result);
+        }).catch(error => {
+          clearTimeout(timeout);
+          if (process && process.pid) {
+            process.kill('SIGTERM');
+          }
+          reject(error);
+        });
+      }).catch(error => {
+        reject(error);
+      });
+    });
+  }
+
 }

@@ -133,7 +133,7 @@ export const Cloud = toMixin(base => class Cloud extends base {
       const id = data.id;
       switch (data.method) {
         case 'add_device':
-          this.newDevice(1, data.body).then((body) => {
+          this.discover(data.body).then((body) => {
             this.ws.emit('response', {id, body});
           }).catch(error => {
             this.ws.emit('response', {id, error});
