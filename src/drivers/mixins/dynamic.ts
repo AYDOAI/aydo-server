@@ -3,6 +3,7 @@ import * as os from 'os';
 import {removeLast} from '../../../lib/shared';
 import {ConnectionStates} from '../../models/connection-states';
 import {toMixin} from '../../../lib/foibles';
+import * as process from "node:process";
 
 const path = require('path');
 const fs = require('fs');
@@ -80,12 +81,14 @@ export const Dynamic = toMixin(parent => class Dynamic extends parent {
 
                     this.app.log(`Start: ${moduleName.command} ${JSON.stringify(moduleName.args)}${options.cwd ? `; directory: ${options.cwd}` : ''}`)
                     console.log(options);
-
+                    console.log("*****DEBUG******NNODE****PATH*****");
+                    console.log(path.join(process.cwd(),"node_modules"))
+                    console.log(path.join(__dirname,"node_modules"))
                     let device = spawn(moduleName.command, moduleName.args, {
-                        ...options, cwd: 'c:\\Users\\PAXA\\Desktop\\AYDO_WIN\\aydo-electron\\dist\\server',
+                        ...options,
                         env: {
                             ...process.env,
-                            NODE_PATH: path.join(process.cwd(), 'node_modules')
+                            NODE_PATH: 'c:\\Users\\PAXA\\Desktop\\AYDO_WIN\\aydo-electron\\node_modules'
                         }
                     });
                     this.processId = device.pid;
