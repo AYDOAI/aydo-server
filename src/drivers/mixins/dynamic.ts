@@ -88,7 +88,7 @@ export const Dynamic = toMixin(parent => class Dynamic extends parent {
                         ...options,
                         env: {
                             ...process.env,
-                            NODE_PATH: 'c:\\Users\\PAXA\\Desktop\\AYDO_WIN\\aydo-electron\\node_modules'
+                            NODE_PATH: path.join(process.cwd(),"node_modules")
                         }
                     });
                     this.processId = device.pid;
