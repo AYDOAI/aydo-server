@@ -84,8 +84,17 @@ export const Drivers = toMixin(base => class Drivers extends base {
     return drivers;
   }
 
-  loadTemplate(path, file) {
-    return eval(`require('${path}/${file}')`);
+  loadTemplate(templatePath: string, file: string) {
+    const fullPath = path.join(templatePath, file);
+    if (!fs.existsSync(fullPath)) {
+      throw new Error(`file not found: ${fullPath}`);
+    }
+    const content = fs.readFileSync(fullPath, 'utf8');
+    try {
+      return JSON.parse(content);
+    } catch (e) {
+      throw new Error(e.message);
+    }
   }
 
 });
