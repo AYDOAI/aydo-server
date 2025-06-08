@@ -79,6 +79,7 @@ export class Plugin extends BaseDriver.with(Connect2, Dynamic) {
     }, {
       name: this.driver_name,
       description: this.description,
+      standalone: this.plugin_template?.standalone || false,
     }).then((driver) => {
       this.db_driver = driver;
     }).catch(error => {

@@ -68,6 +68,10 @@ export const BaseDriver = toExtendable(class BaseDriver extends Base.with(Queue,
     return this.db_driver ? this.db_driver.id : null;
   }
 
+  get standalone() {
+    return this.db_driver ? this.db_driver.standalone : false;
+  }
+
   get device_name() {
     return this.db_device ? this.db_device.name : null;
   }
