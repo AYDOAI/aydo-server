@@ -615,4 +615,19 @@ export class App extends Base.with(Config, Database, Emitter, Log, RestApi, Driv
       }
     });
   }
+
+  discover(body: any) {
+    return new Promise((resolve, reject) => {
+      const driver = this.findDriverByClassName(body.class_name);
+      if (driver) {
+        driver.discover(body.settings).then((result) => {
+          resolve(result);
+        }).catch((error) => {
+          reject(error);
+        });
+      } else {
+        reject({message: 'Driver not found.'});
+      }
+    });
+  }
 }
