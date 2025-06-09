@@ -98,7 +98,7 @@ const start = () => {
         glob: 'migrations/*.js',
         resolve: ({name, path: migrationPath, context}) => {
           console.log('Running migration: ', name, path);
-          const migration = require(path.resolve(migrationPath));
+          const migration = require(require('path').resolve(migrationPath));
           return {
             name,
             up: async () => migration.up({context}),
