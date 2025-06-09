@@ -8,7 +8,7 @@ import * as fs from 'fs';
 import * as archiver from 'archiver';
 import * as extract from 'extract-zip';
 import * as fse from 'fs-extra';
-import { exec } from 'child_process';
+import { exec, spawn } from 'child_process';
 
 const io = require('socket.io-client');
 
@@ -77,14 +77,16 @@ export const Cloud = toMixin(base => class Cloud extends base {
       return;
     }
 
-    const registerGateway = () => {
+    const registerGateway = async () => {
+      const timezoneSettings = await this.getAvailableTimeZones();
       this.ws.emit('register_gateway', {
         server_id: this.identifier,
         token: this.token,
         environment: this.config.environment,
         platform: os.platform(),
         arch: arch(),
-        version: this.version
+        version: this.version,
+        timezone_settings: timezoneSettings
       });
     }
 
@@ -131,7 +133,7 @@ export const Cloud = toMixin(base => class Cloud extends base {
       const id = data.id;
       switch (data.method) {
         case 'add_device':
-          this.newDevice(1, data.body).then((body) => {
+          this.discover(data.body).then((body) => {
             this.ws.emit('response', {id, body});
           }).catch(error => {
             this.ws.emit('response', {id, error});
@@ -171,6 +173,9 @@ export const Cloud = toMixin(base => class Cloud extends base {
           }).catch(error => {
             this.ws.emit('response', {id, error})
           })
+          break;
+        case 'update_settings':
+          this.updateSettings(data.body);
           break;
       }
     });
@@ -1073,4 +1078,35 @@ export const Cloud = toMixin(base => class Cloud extends base {
     });
   }
 
+  getAvailableTimeZones() {
+    return new Promise((resolve, reject) => {
+      const child = spawn('timedatectl', ['list-timezones']);
+      let timezones = '';
+      child.stdout.on('data', (data) => {
+        timezones += data.toString();
+      });
+      child.stderr.on('data', (data) => {
+        this.app.error(data.toString());
+        reject(data.toString());
+      });
+        child.on('close', (code) => {
+          resolve(timezones);
+        });
+    });
+  }
+
+  updateSettings(settings: any) {
+    if (settings.timezone) {
+      this.setTimezone(settings.timezone);
+    }
+  }
+
+  setTimezone(timezone: string) {
+    return new Promise((resolve, reject) => {
+      const child = spawn('timedatectl', ['set-timezone', timezone]);
+      child.on('close', (code) => {
+        resolve(code);
+      });
+    });
+  }
 });
