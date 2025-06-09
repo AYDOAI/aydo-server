@@ -46,13 +46,7 @@ const updateConfig = () => {
 }
 
 try {
-  const resolvedPath = path.resolve(configPath);
-  if (fs.existsSync(resolvedPath)) {
-    delete require.cache[require.resolve(resolvedPath)];
-    config = require(resolvedPath);
-  } else {
-    throw new Error('Configuration file not found.');
-  }
+  config = eval(`require('${configPath}')`);
 } catch (e) {
   console.log('Configuration file not found. Creating a default configuration file.');
   config = {
@@ -96,9 +90,9 @@ const start = () => {
     const migrate = new Umzug({
       migrations: {
         glob: 'migrations/*.js',
-        resolve: ({name, path: migrationPath, context}) => {
+        resolve: ({name, path, context}) => {
           console.log('Running migration: ', name, path);
-          const migration = require(require('path').resolve(migrationPath));
+          const migration = eval(`require(path)`);
           return {
             name,
             up: async () => migration.up({context}),

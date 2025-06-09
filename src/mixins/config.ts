@@ -1,6 +1,5 @@
 import * as fs from 'fs';
 import * as os from 'os';
-import * as path from 'path';
 import {ConfigFile} from '../models/config-file';
 import {AppOptions} from '../app';
 import {toMixin} from '../../lib/foibles';
@@ -46,9 +45,7 @@ export const Config = toMixin(base => class ConfigClass extends base {
   }
 
   reloadConfig() {
-    const resolvedPath = path.resolve(this.configPath);
-    delete require.cache[require.resolve(resolvedPath)];
-    this.config = require(resolvedPath);
+    this.config = eval(`require('${this.configPath}')`);
     this.configDate = this.getConfigDate();
   }
 
