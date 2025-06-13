@@ -77,7 +77,17 @@ export const Dynamic = toMixin(parent => class Dynamic extends parent {
           this.app.log(`Start: ${moduleName.command} ${JSON.stringify(moduleName.args)}${options.cwd ? `; directory: ${options.cwd}` : ''}`)
           console.log(options);
 
-          let device = spawn(moduleName.command, moduleName.args, options);
+          const nodeModulesPath = this.findNodeModulesPath(process.cwd());
+          if (!nodeModulesPath) {
+            throw new Error(`node_modules not found at ${nodeModulesPath}`);
+          }
+          let device = spawn(moduleName.command, moduleName.args, {
+            ...options,
+            env: {
+              ...process.env,
+              NODE_PATH: nodeModulesPath
+            }
+          });
           this.processId = device.pid;
           const logModuleName = `${this.driver_module_name}-${this.id}`;
           if (device.stdout) {
@@ -145,6 +155,24 @@ export const Dynamic = toMixin(parent => class Dynamic extends parent {
         resolve({});
       }
     });
+  }
+
+  findNodeModulesPath(startPath) {
+    let currentPath = startPath;
+
+    while (true) {
+      const nodeModulesPath = path.join(currentPath, 'node_modules');
+      if (fs.existsSync(nodeModulesPath)) {
+        return nodeModulesPath;
+      }
+
+      const parentPath = path.dirname(currentPath);
+      if (parentPath === currentPath) {
+        return null;
+      }
+
+      currentPath = parentPath;
+    }
   }
 
   restartServerEx() {
