@@ -1080,18 +1080,40 @@ export const Cloud = toMixin(base => class Cloud extends base {
 
   getAvailableTimeZones() {
     return new Promise((resolve, reject) => {
-      const child = spawn('timedatectl', ['list-timezones']);
-      let timezones = '';
+      let command: string;
+      let args: string[];
+
+      if (process.platform === 'linux') {
+        command = 'timedatectl';
+        args = ['list-timezones'];
+      } else if (process.platform === 'win32') {
+        command = 'tzutil';
+        args = ['/l'];
+      } else if (process.platform === 'darwin') {
+        command = 'find';
+        args = ['/usr/share/zoneinfo', '-type', 'f'];
+      } else {
+        return reject(new Error('Cannot load timezones: Unknown OS'));
+      }
+
+      const child = spawn(command, args);
+      let output = '';
+
       child.stdout.on('data', (data) => {
-        timezones += data.toString();
+        output += data.toString();
       });
+
       child.stderr.on('data', (data) => {
-        this.app.error(data.toString());
         reject(data.toString());
       });
-        child.on('close', (code) => {
-          resolve(timezones);
-        });
+
+      child.on('close', () => {
+        let timezones = output.split(/\r?\n/).filter(Boolean);
+        if (process.platform === 'darwin') {
+          timezones = timezones.map(tz => tz.replace('/usr/share/zoneinfo/', ''));
+        }
+        resolve(timezones);
+      });
     });
   }
 
