@@ -60,10 +60,6 @@ export const Cloud = toMixin(base => class Cloud extends base {
   load(options: AppOptions) {
     super.load(options);
     this.register();
-
-    if (this.config.core?.updateOnStart) {
-      this.applyUpdatesAndRestart();
-    }
   }
 
   register() {
@@ -120,6 +116,9 @@ export const Cloud = toMixin(base => class Cloud extends base {
       }
       if (this.zonesReady && !this.zonesSend) {
         this.registerZones();
+      }
+      if (this.config.core?.updateOnStart) {
+        this.applyUpdatesAndRestart();
       }
     });
 
