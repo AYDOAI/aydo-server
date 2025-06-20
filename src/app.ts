@@ -382,7 +382,7 @@ export class App extends Base.with(Config, Database, Emitter, Log, RestApi, Driv
     })
   }
 
-  newDevice(user_id: number, body: any) {
+  newDevice(body: any) {
     return new Promise((resolve, reject) => {
       const driver = this.findDriverByClassName(body.class_name);
       const isValid = this.isNewDeviceValid(body);

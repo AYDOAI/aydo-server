@@ -60,10 +60,6 @@ export const Cloud = toMixin(base => class Cloud extends base {
   load(options: AppOptions) {
     super.load(options);
     this.register();
-
-    if (this.config.core?.updateOnStart) {
-      this.applyUpdatesAndRestart();
-    }
   }
 
   register() {
@@ -121,6 +117,9 @@ export const Cloud = toMixin(base => class Cloud extends base {
       if (this.zonesReady && !this.zonesSend) {
         this.registerZones();
       }
+      if (this.config.core?.updateOnStart) {
+        this.applyUpdatesAndRestart();
+      }
     });
 
     this.ws.on('force_update_components', async () => {
@@ -133,7 +132,7 @@ export const Cloud = toMixin(base => class Cloud extends base {
       const id = data.id;
       switch (data.method) {
         case 'add_device':
-          this.discover(data.body).then((body) => {
+          this.newDevice(data.body).then((body) => {
             this.ws.emit('response', {id, body});
           }).catch(error => {
             this.ws.emit('response', {id, error});
@@ -237,7 +236,8 @@ export const Cloud = toMixin(base => class Cloud extends base {
           description: driver.description,
           driverId: driver.driver_id,
           type: driver.driver_type,
-          settings: driver.driver_settings
+          settings: driver.driver_settings,
+          standalone: driver.standalone
         };
 
         if (class_name === 'zigbee2mqtt') {
