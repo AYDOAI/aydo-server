@@ -15,6 +15,11 @@ export class Drivers extends BaseModel {
         type: app.Sequelize.DataTypes.STRING,
         allowNull: false
       },
+      standalone: {
+        type: app.Sequelize.DataTypes.BOOLEAN,
+        allowNull: true,
+        defaultValue: false
+      },
     }, {
       underscored: true,
     });
