@@ -28,7 +28,10 @@ function initRoutes(app) {
       if (error && typeof error === 'string') {
         this.status(status).json({errorCode: error, errorMessage: ''});
       } else if (error) {
-        const newError: any = {};
+        const newError: {
+          message?: string;
+          stack?: string;
+        } = {};
         if (error.message) {
           newError.message = error.message;
         }
@@ -59,7 +62,11 @@ function initRoutes(app) {
       const token = authHeader && authHeader.split(' ')[1]
       if (token) {
         const jwt = require('jsonwebtoken');
-        jwt.verify(token, app.config.token, (error: any, user: any) => {
+        jwt.verify(token, app.config.token, (error: any, user: {
+          id: number;
+          login: string;
+          [key: string]: any;
+        }) => {
           if (error) {
             app.error(error)
             return res.error(error, 403)
