@@ -724,14 +724,11 @@ export const Cloud = toMixin(base => class Cloud extends base {
         try {
           await extract(plugin.filePath, { dir: tempDir });
 
-          const jsFiles = fse.readdirSync(tempDir).filter(file => file.endsWith('.js'));
-          for (const jsFile of jsFiles) {
-            await fse.copy(path.join(tempDir, jsFile), path.join(pluginsDir, jsFile));
-          }
-
-          const jsonFiles = fse.readdirSync(tempDir).filter(file => file.endsWith('.json'));
-          for (const jsonFile of jsonFiles) {
-            await fse.copy(path.join(tempDir, jsonFile), path.join(pluginsDir, jsonFile));
+          const items = fse.readdirSync(tempDir);
+          console.log(`Extracted ${items.length} items from archive: ${items.join(', ')}`);
+          for (const item of items) {
+            await fse.copy(path.join(tempDir, item), path.join(pluginsDir, item), { overwrite: true });
+            console.log(`Copied: ${item}`);
           }
 
           const metadataPath = path.join(pluginsDir, `${plugin.name}.json`);
