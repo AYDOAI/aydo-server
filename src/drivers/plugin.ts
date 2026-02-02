@@ -79,6 +79,7 @@ export class Plugin extends BaseDriver.with(Connect2, Dynamic) {
     }, {
       name: this.driver_name,
       description: this.description,
+      standalone: this.plugin_template?.standalone || false,
     }).then((driver) => {
       this.db_driver = driver;
     }).catch(error => {
@@ -321,6 +322,37 @@ export class Plugin extends BaseDriver.with(Connect2, Dynamic) {
             super.deviceCommand(data).then(resolve).catch(reject);
           }
       }
+    });
+  }
+
+  discover(params: any) {
+    return new Promise((resolve, reject) => {
+      const tempId = `discover-${Date.now()}`;
+      
+      this.startServerEx(tempId, false).then((process) => {
+        const timeout = setTimeout(() => {
+          if (process && process.pid) {
+            process.kill('SIGTERM');
+          }
+          reject({message: 'Discover timeout'});
+        }, 30000);
+
+        this.app.request(`driver-${tempId}`, 'discover', params).then((result) => {
+          clearTimeout(timeout);
+          if (process && process.pid) {
+            process.kill('SIGTERM');
+          }
+          resolve(result);
+        }).catch(error => {
+          clearTimeout(timeout);
+          if (process && process.pid) {
+            process.kill('SIGTERM');
+          }
+          reject(error);
+        });
+      }).catch(error => {
+        reject(error);
+      });
     });
   }
 

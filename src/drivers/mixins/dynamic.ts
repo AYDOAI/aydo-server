@@ -40,10 +40,7 @@ export const Dynamic = toMixin(parent => class Dynamic extends parent {
             stdio: 'inherit'
           };
 
-          let pluginsDir = path.join(process.cwd(), 'plugins');
-          if (this.app.config.plugins?.path) {
-            pluginsDir = path.join(this.app.config.plugins?.path);
-          }
+          const pluginsDir = this.app.config.plugins?.path || path.join(os.homedir(), '.aydo', 'server', 'plugins').replace(/\\/g, '/');
 
           const nodeBinary = process.execPath;
 
@@ -80,7 +77,17 @@ export const Dynamic = toMixin(parent => class Dynamic extends parent {
           this.app.log(`Start: ${moduleName.command} ${JSON.stringify(moduleName.args)}${options.cwd ? `; directory: ${options.cwd}` : ''}`)
           console.log(options);
 
-          let device = spawn(moduleName.command, moduleName.args, options);
+          const nodeModulesPath = this.findNodeModulesPath(process.cwd());
+          if (!nodeModulesPath) {
+            throw new Error(`node_modules not found at ${nodeModulesPath}`);
+          }
+          let device = spawn(moduleName.command, moduleName.args, {
+            ...options,
+            env: {
+              ...process.env,
+              NODE_PATH: nodeModulesPath
+            }
+          });
           this.processId = device.pid;
           const logModuleName = `${this.driver_module_name}-${this.id}`;
           if (device.stdout) {
@@ -124,7 +131,7 @@ export const Dynamic = toMixin(parent => class Dynamic extends parent {
               console.log(`kill_process,child process exited with code ${code}`);
             });
 
-            if (!this.app.terminating && !this.disabled && this.app.devices[this.ident] && restart) {
+              if (!this.app.terminating && !this.disabled && this.db_device && this.app.devices[this.ident] && restart) {
               delete this.device;
               this._connectionState = 0;
               setTimeout(() => {
@@ -150,21 +157,40 @@ export const Dynamic = toMixin(parent => class Dynamic extends parent {
     });
   }
 
+  findNodeModulesPath(startPath) {
+    let currentPath = startPath;
+
+    while (true) {
+      const nodeModulesPath = path.join(currentPath, 'node_modules');
+      if (fs.existsSync(nodeModulesPath)) {
+        return nodeModulesPath;
+      }
+
+      const parentPath = path.dirname(currentPath);
+      if (parentPath === currentPath) {
+        return null;
+      }
+
+      currentPath = parentPath;
+    }
+  }
+
   restartServerEx() {
     if (!this.pluginSubDevice && this.device) {
-      this.app.log(`${this.ident} restartServerEx`);
+      this.app.log(`${this.db_device ? this.ident : 'temp-driver'} restartServerEx`);
       this.device.kill();
     }
   }
 
   updateConfig() {
-    // super.updateConfig();
     if (!this.pluginSubDevice && this.device && (!this.getParam('external_driver') || this.getParam('external_driver_ssh_host'))) {
       this.killTimeout = setTimeout(() => {
-        this.app.log(`${this.ident} updateConfig`);
+        this.app.log(`${this.db_device ? this.ident : 'temp-driver'} updateConfig`);
         this.device.kill();
-        this.app.lastAutoUpdateStates = this.app.lastAutoUpdateStates || {};
-        this.app.lastAutoUpdateStates[this.ident] = null;
+        if (this.db_device) {
+          this.app.lastAutoUpdateStates = this.app.lastAutoUpdateStates || {};
+          this.app.lastAutoUpdateStates[this.ident] = null;
+        }
       }, 3000);
       const disabled = this.disabled;
       const devices = this.app.findDevicesByParentId(this.id);
@@ -192,8 +218,8 @@ export const Dynamic = toMixin(parent => class Dynamic extends parent {
           internal_port: this.app.config.port,
           internal_ip: this.app.internal_ip,
           cloud: this.app.config.cloud ? this.app.config.cloud : false,
-          ident: this.ident,
-          params: this.getParams(),
+          ident: this.db_device ? this.ident : 'temp-driver',
+          params: this.db_device ? this.getParams() : {},
           log_path: this.app.config.log.path,
           path: this.app.applicationPath(__dirname, true),
           pid: process.pid,
@@ -220,8 +246,8 @@ export const Dynamic = toMixin(parent => class Dynamic extends parent {
           internal_port: this.app.config.port,
           internal_ip: this.app.internal_ip,
           cloud: this.app.config.cloud ? this.app.config.cloud : false,
-          ident: this.ident,
-          params: this.getParams(),
+          ident: this.db_device ? this.ident : 'temp-driver',
+          params: this.db_device ? this.getParams() : {},
           log_path: this.app.config.log.path,
           path: this.app.applicationPath(__dirname, true),
           pid: process.pid,
@@ -278,7 +304,7 @@ export const Dynamic = toMixin(parent => class Dynamic extends parent {
       device = this;
     }
     if (!options.ident) {
-      options.ident = this.ident;
+      options.ident = this.db_device ? this.ident : 'temp-driver';
     }
     if (!options.device_id) {
       options.device_id = this.id;

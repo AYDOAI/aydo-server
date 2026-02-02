@@ -8,7 +8,7 @@ import * as fs from 'fs';
 import * as archiver from 'archiver';
 import * as extract from 'extract-zip';
 import * as fse from 'fs-extra';
-import { exec } from 'child_process';
+import { exec, spawn } from 'child_process';
 
 const io = require('socket.io-client');
 
@@ -60,10 +60,6 @@ export const Cloud = toMixin(base => class Cloud extends base {
   load(options: AppOptions) {
     super.load(options);
     this.register();
-
-    if (this.config.core?.updateOnStart) {
-      this.applyUpdatesAndRestart();
-    }
   }
 
   register() {
@@ -77,14 +73,16 @@ export const Cloud = toMixin(base => class Cloud extends base {
       return;
     }
 
-    const registerGateway = () => {
+    const registerGateway = async () => {
+      const timezoneSettings = await this.getAvailableTimeZones();
       this.ws.emit('register_gateway', {
         server_id: this.identifier,
         token: this.token,
         environment: this.config.environment,
         platform: os.platform(),
         arch: arch(),
-        version: this.version
+        version: this.version,
+        timezone_settings: timezoneSettings
       });
     }
 
@@ -119,6 +117,9 @@ export const Cloud = toMixin(base => class Cloud extends base {
       if (this.zonesReady && !this.zonesSend) {
         this.registerZones();
       }
+      if (this.config.core?.updateOnStart) {
+        this.applyUpdatesAndRestart();
+      }
     });
 
     this.ws.on('force_update_components', async () => {
@@ -131,7 +132,7 @@ export const Cloud = toMixin(base => class Cloud extends base {
       const id = data.id;
       switch (data.method) {
         case 'add_device':
-          this.newDevice(1, data.body).then((body) => {
+          this.newDevice(data.body).then((body) => {
             this.ws.emit('response', {id, body});
           }).catch(error => {
             this.ws.emit('response', {id, error});
@@ -171,6 +172,9 @@ export const Cloud = toMixin(base => class Cloud extends base {
           }).catch(error => {
             this.ws.emit('response', {id, error})
           })
+          break;
+        case 'update_settings':
+          this.updateSettings(data.body);
           break;
       }
     });
@@ -232,7 +236,8 @@ export const Cloud = toMixin(base => class Cloud extends base {
           description: driver.description,
           driverId: driver.driver_id,
           type: driver.driver_type,
-          settings: driver.driver_settings
+          settings: driver.driver_settings,
+          standalone: driver.standalone
         };
 
         if (class_name === 'zigbee2mqtt') {
@@ -719,14 +724,11 @@ export const Cloud = toMixin(base => class Cloud extends base {
         try {
           await extract(plugin.filePath, { dir: tempDir });
 
-          const jsFiles = fse.readdirSync(tempDir).filter(file => file.endsWith('.js'));
-          for (const jsFile of jsFiles) {
-            await fse.copy(path.join(tempDir, jsFile), path.join(pluginsDir, jsFile));
-          }
-
-          const jsonFiles = fse.readdirSync(tempDir).filter(file => file.endsWith('.json'));
-          for (const jsonFile of jsonFiles) {
-            await fse.copy(path.join(tempDir, jsonFile), path.join(pluginsDir, jsonFile));
+          const items = fse.readdirSync(tempDir);
+          console.log(`Extracted ${items.length} items from archive: ${items.join(', ')}`);
+          for (const item of items) {
+            await fse.copy(path.join(tempDir, item), path.join(pluginsDir, item), { overwrite: true });
+            console.log(`Copied: ${item}`);
           }
 
           const metadataPath = path.join(pluginsDir, `${plugin.name}.json`);
@@ -1073,4 +1075,57 @@ export const Cloud = toMixin(base => class Cloud extends base {
     });
   }
 
+  getAvailableTimeZones() {
+    return new Promise((resolve, reject) => {
+      let command: string;
+      let args: string[];
+
+      if (process.platform === 'linux') {
+        command = 'timedatectl';
+        args = ['list-timezones'];
+      } else if (process.platform === 'win32') {
+        command = 'tzutil';
+        args = ['/l'];
+      } else if (process.platform === 'darwin') {
+        command = 'find';
+        args = ['/usr/share/zoneinfo', '-type', 'f'];
+      } else {
+        return reject(new Error('Cannot load timezones: Unknown OS'));
+      }
+
+      const child = spawn(command, args);
+      let output = '';
+
+      child.stdout.on('data', (data) => {
+        output += data.toString();
+      });
+
+      child.stderr.on('data', (data) => {
+        reject(data.toString());
+      });
+
+      child.on('close', () => {
+        let timezones = output.split(/\r?\n/).filter(Boolean);
+        if (process.platform === 'darwin') {
+          timezones = timezones.map(tz => tz.replace('/usr/share/zoneinfo/', ''));
+        }
+        resolve(timezones);
+      });
+    });
+  }
+
+  updateSettings(settings: any) {
+    if (settings.timezone) {
+      this.setTimezone(settings.timezone);
+    }
+  }
+
+  setTimezone(timezone: string) {
+    return new Promise((resolve, reject) => {
+      const child = spawn('timedatectl', ['set-timezone', timezone]);
+      child.on('close', (code) => {
+        resolve(code);
+      });
+    });
+  }
 });

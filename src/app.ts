@@ -382,7 +382,7 @@ export class App extends Base.with(Config, Database, Emitter, Log, RestApi, Driv
     })
   }
 
-  newDevice(user_id: number, body: any) {
+  newDevice(body: any) {
     return new Promise((resolve, reject) => {
       const driver = this.findDriverByClassName(body.class_name);
       const isValid = this.isNewDeviceValid(body);
@@ -612,6 +612,21 @@ export class App extends Base.with(Config, Database, Emitter, Log, RestApi, Driv
         });
       } else {
         resolve({});
+      }
+    });
+  }
+
+  discover(body: any) {
+    return new Promise((resolve, reject) => {
+      const driver = this.findDriverByClassName(body.class_name);
+      if (driver) {
+        driver.discover(body.settings).then((result) => {
+          resolve(result);
+        }).catch((error) => {
+          reject(error);
+        });
+      } else {
+        reject({message: 'Driver not found.'});
       }
     });
   }
