@@ -23,7 +23,7 @@
     "fs-extra": "^11.3.0",
     "jsonwebtoken": "^9.0.2",
     "lodash": "^4.17.21",
-    "mqtt": "4.3.7",
+    "mqtt": "^5.11.0",
     "node-eta": "^0.9.0",
     "node-ipc": "12.0.0",
     "qrcode": "^1.5.4",
@@ -35,9 +35,9 @@
     "umzug": "^3.6.1",
     "winston": "^3.17.0",
     "yaml": "^2.7.0",
-    "zigbee-herdsman": "^2.1.9",
-    "zigbee-herdsman-converters": "20.58.0",
-    "zigbee2mqtt-frontend": "0.7.6"
+    "zigbee-herdsman": "4.3.1",
+    "zigbee-herdsman-converters": "23.69.0",
+    "zigbee2mqtt-frontend": "^0.9.16"
   },
   "devDependencies": {
     "@types/archiver": "^6.0.3",
